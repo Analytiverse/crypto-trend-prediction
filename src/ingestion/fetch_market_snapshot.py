@@ -2,61 +2,46 @@ import os
 from datetime import datetime, timezone
 
 import pandas as pd
-import requests
-from dotenv import load_dotenv
+
+from src.api.coingecko_client import CoinGeckoClient
+from src.config import (
+    COINS,
+    RAW_SNAPSHOT_FILE,
+    VS_CURRENCY,
+)
 
 
-load_dotenv()
-
-API_KEY = os.getenv("COINGECKO_API_KEY")
-
-BASE_URL = "https://api.coingecko.com/api/v3"
-
-COINS = [
-    "bitcoin",
-    "ethereum",
-    "solana",
-    "ripple",
-    "cardano",
-]
-
-OUTPUT_FILE = "data/raw/market_snapshots.csv"
+client = CoinGeckoClient()
 
 
 def fetch_market_data():
-    url = f"{BASE_URL}/coins/markets"
-
-    headers = {
-        "x-cg-demo-api-key": API_KEY
-    }
-
     params = {
-        "vs_currency": "usd",
+        "vs_currency": VS_CURRENCY,
         "ids": ",".join(COINS),
         "price_change_percentage": "1h,24h,7d",
         "sparkline": "false",
     }
 
-    response = requests.get(
-        url,
-        headers=headers,
+    return client.get(
+        endpoint="/coins/markets",
         params=params,
-        timeout=30
     )
 
-    response.raise_for_status()
 
-    return response.json()
-
-
-def transform_market_data(data):
-    collected_at = datetime.now(timezone.utc).isoformat()
+def transform_market_data(
+    data,
+):
+    collected_at = (
+        datetime
+        .now(timezone.utc)
+        .isoformat()
+    )
 
     rows = []
 
     for coin in data:
-        rows.append(
-            {
+        try:
+            row = {
                 "coin_id": coin["id"],
                 "symbol": coin["symbol"].upper(),
                 "name": coin["name"],
@@ -66,59 +51,155 @@ def transform_market_data(data):
                 "total_volume": coin["total_volume"],
                 "high_24h": coin["high_24h"],
                 "low_24h": coin["low_24h"],
-                "price_change_24h": coin["price_change_24h"],
+                "price_change_24h":
+                    coin["price_change_24h"],
                 "price_change_percentage_24h":
-                    coin["price_change_percentage_24h"],
+                    coin[
+                        "price_change_percentage_24h"
+                    ],
                 "price_change_percentage_1h":
-                    coin.get("price_change_percentage_1h_in_currency"),
+                    coin.get(
+                        "price_change_percentage_1h_in_currency"
+                    ),
                 "price_change_percentage_7d":
-                    coin.get("price_change_percentage_7d_in_currency"),
-                "circulating_supply": coin["circulating_supply"],
-                "last_updated": coin["last_updated"],
-                "collected_at": collected_at,
+                    coin.get(
+                        "price_change_percentage_7d_in_currency"
+                    ),
+                "circulating_supply":
+                    coin["circulating_supply"],
+                "last_updated":
+                    coin["last_updated"],
+                "collected_at":
+                    collected_at,
             }
-        )
+
+            rows.append(row)
+
+        except KeyError as exc:
+            print(
+                f"Skipping malformed coin record. "
+                f"Missing field: {exc}"
+            )
 
     return pd.DataFrame(rows)
 
 
-def save_without_duplicates(df):
-    if os.path.exists(OUTPUT_FILE):
-        existing_df = pd.read_csv(OUTPUT_FILE)
+def save_without_duplicates(
+    new_df,
+):
+    if os.path.exists(RAW_SNAPSHOT_FILE):
+        existing_df = pd.read_csv(
+            RAW_SNAPSHOT_FILE
+        )
 
         combined_df = pd.concat(
-            [existing_df, df],
-            ignore_index=True
+            [
+                existing_df,
+                new_df,
+            ],
+            ignore_index=True,
         )
+
     else:
-        combined_df = df
+        combined_df = new_df.copy()
 
-    combined_df = combined_df.drop_duplicates(
-        subset=["coin_id", "last_updated"],
-        keep="last"
-    )
-
-    combined_df = combined_df.sort_values(
-        ["coin_id", "last_updated"]
+    combined_df = (
+        combined_df
+        .drop_duplicates(
+            subset=[
+                "coin_id",
+                "last_updated",
+            ],
+            keep="last",
+        )
+        .sort_values(
+            [
+                "coin_id",
+                "last_updated",
+            ]
+        )
+        .reset_index(drop=True)
     )
 
     combined_df.to_csv(
-        OUTPUT_FILE,
-        index=False
+        RAW_SNAPSHOT_FILE,
+        index=False,
     )
 
-    print(f"Fetched rows: {len(df)}")
-    print(f"Total unique rows: {len(combined_df)}")
+    print(
+        f"Fetched rows in this run: "
+        f"{len(new_df)}"
+    )
+
+    print(
+        f"Total unique rows stored: "
+        f"{len(combined_df)}"
+    )
 
 
 def main():
-    data = fetch_market_data()
+    print(
+        "Fetching current market data..."
+    )
 
-    df = transform_market_data(data)
+    try:
+        data = fetch_market_data()
 
-    print(df)
+        if data is None:
+            print(
+                "Snapshot ingestion failed "
+                "because the API request did not succeed."
+            )
 
-    save_without_duplicates(df)
+            return
+
+        if not isinstance(data, list):
+            print(
+                "Unexpected response format "
+                "from CoinGecko."
+            )
+
+            return
+
+        df = transform_market_data(
+            data
+        )
+
+        if df.empty:
+            print(
+                "No valid market snapshot "
+                "records were returned."
+            )
+
+            return
+
+        try:
+            save_without_duplicates(
+                df
+            )
+
+        except PermissionError:
+            print(
+                f"Could not write to "
+                f"{RAW_SNAPSHOT_FILE}."
+            )
+
+            print(
+                "Make sure the CSV is not "
+                "currently open in Excel."
+            )
+
+        except Exception as exc:
+            print(
+                f"Failed while saving "
+                f"snapshot data: {exc}"
+            )
+
+    except Exception as exc:
+        print(
+            f"Snapshot ingestion failed: "
+            f"{exc}"
+        )
 
 
 if __name__ == "__main__":

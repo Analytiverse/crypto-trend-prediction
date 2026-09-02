@@ -1,78 +1,84 @@
 import os
 
 import pandas as pd
-import requests
-from dotenv import load_dotenv
+
+from src.api.coingecko_client import CoinGeckoClient
+from src.config import (
+    COINS,
+    RAW_HISTORY_FILE,
+    VS_CURRENCY,
+)
 
 
-load_dotenv()
-
-API_KEY = os.getenv("COINGECKO_API_KEY")
-
-BASE_URL = "https://api.coingecko.com/api/v3"
-
-COINS = [
-    "bitcoin",
-    "ethereum",
-    "solana",
-    "ripple",
-    "cardano",
-]
-
-OUTPUT_FILE = "data/raw/market_history.csv"
+client = CoinGeckoClient()
 
 
-def fetch_coin_history(coin_id, days=90):
-    url = f"{BASE_URL}/coins/{coin_id}/market_chart"
-
-    headers = {
-        "x-cg-demo-api-key": API_KEY
-    }
-
+def fetch_coin_history(
+    coin_id,
+    days=90,
+):
     params = {
-        "vs_currency": "usd",
+        "vs_currency": VS_CURRENCY,
         "days": days,
         "interval": "hourly",
     }
 
-    response = requests.get(
-        url,
-        headers=headers,
+    return client.get(
+        endpoint=f"/coins/{coin_id}/market_chart",
         params=params,
-        timeout=30
     )
 
-    response.raise_for_status()
 
-    return response.json()
+def transform_history(
+    coin_id,
+    data,
+):
+    required_keys = [
+        "prices",
+        "market_caps",
+        "total_volumes",
+    ]
 
+    for key in required_keys:
+        if key not in data:
+            raise ValueError(
+                f"Missing expected API field: {key}"
+            )
 
-def transform_history(coin_id, data):
     price_df = pd.DataFrame(
         data["prices"],
-        columns=["timestamp_ms", "price"]
+        columns=[
+            "timestamp_ms",
+            "price",
+        ],
     )
 
     market_cap_df = pd.DataFrame(
         data["market_caps"],
-        columns=["timestamp_ms", "market_cap"]
+        columns=[
+            "timestamp_ms",
+            "market_cap",
+        ],
     )
 
     volume_df = pd.DataFrame(
         data["total_volumes"],
-        columns=["timestamp_ms", "total_volume"]
+        columns=[
+            "timestamp_ms",
+            "total_volume",
+        ],
     )
 
     df = price_df.merge(
         market_cap_df,
         on="timestamp_ms",
-        how="outer"
+        how="outer",
     )
 
     df = df.merge(
         volume_df,
         on="timestamp_ms",
-        how="outer"
+        how="outer",
     )
 
     df["coin_id"] = coin_id
@@ -80,7 +86,7 @@ def transform_history(coin_id, data):
     df["timestamp"] = pd.to_datetime(
         df["timestamp_ms"],
         unit="ms",
-        utc=True
+        utc=True,
     )
 
     return df[
@@ -95,62 +101,188 @@ def transform_history(coin_id, data):
     ]
 
 
-def save_without_duplicates(new_df):
-    if os.path.exists(OUTPUT_FILE):
-        existing_df = pd.read_csv(OUTPUT_FILE)
+def save_without_duplicates(
+    new_df,
+):
+    if os.path.exists(RAW_HISTORY_FILE):
+        existing_df = pd.read_csv(
+            RAW_HISTORY_FILE
+        )
 
         combined_df = pd.concat(
-            [existing_df, new_df],
-            ignore_index=True
+            [
+                existing_df,
+                new_df,
+            ],
+            ignore_index=True,
         )
     else:
-        combined_df = new_df
+        combined_df = new_df.copy()
 
-    combined_df = combined_df.drop_duplicates(
-        subset=["coin_id", "timestamp_ms"],
-        keep="last"
-    )
-
-    combined_df = combined_df.sort_values(
-        ["coin_id", "timestamp_ms"]
+    combined_df = (
+        combined_df
+        .drop_duplicates(
+            subset=[
+                "coin_id",
+                "timestamp_ms",
+            ],
+            keep="last",
+        )
+        .sort_values(
+            [
+                "coin_id",
+                "timestamp_ms",
+            ]
+        )
+        .reset_index(drop=True)
     )
 
     combined_df.to_csv(
-        OUTPUT_FILE,
-        index=False
+        RAW_HISTORY_FILE,
+        index=False,
     )
 
-    print(f"Fetched rows: {len(new_df)}")
-    print(f"Total unique rows: {len(combined_df)}")
+    print(
+        f"Fetched rows in this run: "
+        f"{len(new_df)}"
+    )
+
+    print(
+        f"Total unique rows stored: "
+        f"{len(combined_df)}"
+    )
+
+
+def process_coin(
+    coin_id,
+):
+    print(
+        f"\nFetching historical data "
+        f"for {coin_id}..."
+    )
+
+    try:
+        data = fetch_coin_history(
+            coin_id=coin_id,
+            days=90,
+        )
+
+        if data is None:
+            print(
+                f"Skipping {coin_id}: "
+                f"API request failed."
+            )
+
+            return None
+
+        df = transform_history(
+            coin_id=coin_id,
+            data=data,
+        )
+
+        if df.empty:
+            print(
+                f"Skipping {coin_id}: "
+                f"API returned no usable rows."
+            )
+
+            return None
+
+        print(
+            f"{coin_id}: "
+            f"{len(df)} rows fetched successfully."
+        )
+
+        return df
+
+    except Exception as exc:
+        print(
+            f"Failed to process "
+            f"{coin_id}: {exc}"
+        )
+
+        return None
 
 
 def main():
-    all_data = []
+    successful_data = []
+
+    successful_coins = []
+
+    failed_coins = []
 
     for coin in COINS:
-        print(f"Fetching historical data for {coin}...")
-
-        data = fetch_coin_history(
-            coin_id=coin,
-            days=90
+        df = process_coin(
+            coin_id=coin
         )
 
-        df = transform_history(
-            coin_id=coin,
-            data=data
+        if df is not None:
+            successful_data.append(df)
+
+            successful_coins.append(coin)
+
+        else:
+            failed_coins.append(coin)
+
+    if successful_data:
+        final_df = pd.concat(
+            successful_data,
+            ignore_index=True,
         )
 
-        all_data.append(df)
+        try:
+            save_without_duplicates(
+                final_df
+            )
 
-    final_df = pd.concat(
-        all_data,
-        ignore_index=True
+        except PermissionError:
+            print(
+                "\nCould not write to "
+                f"{RAW_HISTORY_FILE}."
+            )
+
+            print(
+                "Make sure the CSV is not "
+                "currently open in Excel."
+            )
+
+        except Exception as exc:
+            print(
+                f"\nFailed while saving "
+                f"historical data: {exc}"
+            )
+
+    else:
+        print(
+            "\nNo historical data was "
+            "fetched successfully."
+        )
+
+    print(
+        "\n========== INGESTION SUMMARY =========="
     )
 
-    save_without_duplicates(final_df)
+    print(
+        f"Successful coins: "
+        f"{len(successful_coins)}"
+    )
 
-    print("\nSample data:")
-    print(final_df.head())
+    if successful_coins:
+        print(
+            "Successful coin list:",
+            ", ".join(successful_coins),
+        )
+
+    print(
+        f"Failed coins: "
+        f"{len(failed_coins)}"
+    )
+
+    if failed_coins:
+        print(
+            "Failed coin list:",
+            ", ".join(failed_coins),
+        )
 
 
 if __name__ == "__main__":

@@ -1,39 +1,33 @@
-import os
-
-import requests
-from dotenv import load_dotenv
+from src.api.coingecko_client import CoinGeckoClient
 
 
-# Load variables from the .env file
-load_dotenv()
+def main():
+    client = CoinGeckoClient()
 
-# Read our CoinGecko API key
-API_KEY = os.getenv("COINGECKO_API_KEY")
-
-BASE_URL = "https://api.coingecko.com/api/v3"
-
-
-def test_connection():
-    if not API_KEY:
-        raise ValueError(
-            "COINGECKO_API_KEY was not found in the .env file."
-        )
-
-    headers = {
-        "x-cg-demo-api-key": API_KEY
-    }
-
-    response = requests.get(
-        f"{BASE_URL}/ping",
-        headers=headers,
-        timeout=30
+    print(
+        "Testing CoinGecko connection..."
     )
 
-    response.raise_for_status()
+    data = client.get(
+        endpoint="/ping"
+    )
 
-    print("CoinGecko connection successful!")
-    print("Response:", response.json())
+    if data is None:
+        print(
+            "CoinGecko connection failed."
+        )
+
+        return
+
+    print(
+        "CoinGecko connection successful."
+    )
+
+    print(
+        "Response:",
+        data,
+    )
 
 
 if __name__ == "__main__":
-    test_connection()
+    main()
