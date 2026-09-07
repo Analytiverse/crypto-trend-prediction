@@ -1,7 +1,9 @@
 import os
 from decimal import Decimal
+from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException
+from fastapi.responses import HTMLResponse
 from sqlalchemy import text
 
 from src.database.connection import get_engine
@@ -9,6 +11,8 @@ from src.pipelines.daily_market_pipeline import run_daily_pipeline
 
 
 app = FastAPI()
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def serialize_value(value):
@@ -19,6 +23,19 @@ def serialize_value(value):
         return value.isoformat()
 
     return value
+
+
+@app.get("/", response_class=HTMLResponse)
+def dashboard():
+    index_file = PROJECT_ROOT / "index.html"
+
+    if not index_file.exists():
+        raise HTTPException(
+            status_code=500,
+            detail="index.html not found.",
+        )
+
+    return index_file.read_text(encoding="utf-8")
 
 
 @app.get("/api/market-data")
@@ -94,7 +111,9 @@ def get_market_data():
 
 
 @app.get("/api/daily-ingestion")
-def daily_ingestion(authorization: str | None = Header(default=None)):
+def daily_ingestion(
+    authorization: str | None = Header(default=None)
+):
     cron_secret = os.getenv("CRON_SECRET")
 
     if not cron_secret:
