@@ -1,4 +1,4 @@
-from src.config import COINS
+from config import COINS
 from src.database.repository import (
     upsert_hourly_history,
     upsert_raw_history,

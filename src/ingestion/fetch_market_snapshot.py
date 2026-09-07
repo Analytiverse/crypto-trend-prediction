@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import pandas as pd
 
 from src.api.coingecko_client import CoinGeckoClient
-from src.config import (
+from config import (
     COINS,
     RAW_SNAPSHOT_FILE,
     VS_CURRENCY,

@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 
-from src.config import DATABASE_URL
+from config import DATABASE_URL
 
 
 # Explicitly use the Psycopg 3 driver with SQLAlchemy
