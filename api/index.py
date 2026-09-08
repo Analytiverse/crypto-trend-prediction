@@ -1,4 +1,6 @@
+import math
 import os
+
 from decimal import Decimal
 from pathlib import Path
 
@@ -13,16 +15,31 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 # =========================================================
-# SERIALIZATION HELPERS
+# JSON SERIALIZATION HELPERS
 # =========================================================
 
 def serialize_value(value):
     """
     Convert database values into JSON-safe values.
+
+    Handles:
+    - Decimal
+    - datetime/date values
+    - NaN
+    - positive/negative infinity
     """
 
+    if value is None:
+        return None
+
     if isinstance(value, Decimal):
-        return float(value)
+        value = float(value)
+
+    if isinstance(value, float):
+        if math.isnan(value) or math.isinf(value):
+            return None
+
+        return value
 
     if hasattr(value, "isoformat"):
         return value.isoformat()
@@ -32,7 +49,8 @@ def serialize_value(value):
 
 def serialize_rows(rows):
     """
-    Convert SQLAlchemy mapping rows into JSON-safe dictionaries.
+    Convert SQLAlchemy mapping rows
+    into JSON-safe dictionaries.
     """
 
     return [
@@ -45,14 +63,11 @@ def serialize_rows(rows):
 
 
 # =========================================================
-# DASHBOARD UI
+# FRONTEND DASHBOARD
 # =========================================================
 
 @app.get("/", response_class=HTMLResponse)
 def dashboard():
-    """
-    Serve the frontend dashboard.
-    """
 
     index_file = PROJECT_ROOT / "index.html"
 
@@ -73,14 +88,7 @@ def dashboard():
 
 @app.get("/api/market-data")
 def get_market_data():
-    """
-    Return raw, cleaned and merged market data
-    for the dashboard.
-    """
 
-    # Import only when endpoint is called.
-    # This prevents DB/config problems from
-    # crashing the entire FastAPI application.
     try:
         from src.database.connection import get_engine
 
@@ -99,7 +107,7 @@ def get_market_data():
         with engine.connect() as connection:
 
             # =================================================
-            # LATEST MARKET VALUE PER COIN
+            # LATEST CLEAN HOURLY DATA FOR EACH COIN
             # =================================================
 
             latest_rows = connection.execute(
@@ -107,7 +115,7 @@ def get_market_data():
                     """
                     SELECT DISTINCT ON (mh.coin_id)
                         mh.coin_id,
-                        c.symbol,
+                        UPPER(c.symbol) AS symbol,
                         c.name,
                         mh.price,
                         mh.market_cap,
@@ -116,6 +124,9 @@ def get_market_data():
                     FROM market_hourly mh
                     JOIN coins c
                         ON c.coin_id = mh.coin_id
+                    WHERE mh.price IS NOT NULL
+                      AND mh.market_cap IS NOT NULL
+                      AND mh.total_volume IS NOT NULL
                     ORDER BY
                         mh.coin_id,
                         mh.timestamp DESC;
@@ -165,7 +176,7 @@ def get_market_data():
             ).mappings().all()
 
             # =================================================
-            # RAW MARKET SNAPSHOTS
+            # RAW CURRENT MARKET SNAPSHOTS
             # =================================================
 
             raw_snapshots = connection.execute(
@@ -238,10 +249,11 @@ def get_market_data():
             ).mappings().all()
 
             # =================================================
-            # CLEAN MARKET SNAPSHOTS
+            # CLEAN CURRENT MARKET SNAPSHOTS
             #
-            # Keep one observation per coin/hour.
-            # Remove rows missing the important market fields.
+            # One latest snapshot per coin per hour.
+            # Rows missing price, market cap or volume
+            # are removed.
             # =================================================
 
             clean_snapshots = connection.execute(
@@ -294,10 +306,9 @@ def get_market_data():
 
                         FROM market_snapshots
 
-                    ) snapshot_rows
+                    ) AS snapshot_rows
 
                     WHERE row_num = 1
-
                       AND current_price IS NOT NULL
                       AND market_cap IS NOT NULL
                       AND total_volume IS NOT NULL
@@ -310,12 +321,7 @@ def get_market_data():
             ).mappings().all()
 
             # =================================================
-            # FINAL MERGED ANALYTICAL TABLE
-            #
-            # Coin information +
-            # cleaned hourly price +
-            # market cap +
-            # volume
+            # FINAL MODEL-READY / MERGED TABLE
             # =================================================
 
             merged_market = connection.execute(
@@ -344,7 +350,7 @@ def get_market_data():
             ).mappings().all()
 
             # =================================================
-            # DATA QUALITY SUMMARY
+            # DATA QUALITY COUNTS
             # =================================================
 
             quality = connection.execute(
@@ -362,7 +368,8 @@ def get_market_data():
 
                         (
                             SELECT
-                                COUNT(*) -
+                                COUNT(*)
+                                -
                                 COUNT(
                                     DISTINCT (
                                         coin_id,
@@ -382,7 +389,8 @@ def get_market_data():
 
                         (
                             SELECT
-                                COUNT(*) -
+                                COUNT(*)
+                                -
                                 COUNT(
                                     DISTINCT (
                                         coin_id,
@@ -438,7 +446,7 @@ def get_market_data():
             ).mappings().one()
 
         # =====================================================
-        # API RESPONSE
+        # RESPONSE
         # =====================================================
 
         return {
@@ -514,10 +522,6 @@ def daily_ingestion(
         default=None
     )
 ):
-    """
-    Endpoint called by Vercel Cron
-    to run the daily ingestion pipeline.
-    """
 
     cron_secret = os.getenv(
         "CRON_SECRET"
@@ -526,9 +530,7 @@ def daily_ingestion(
     if not cron_secret:
         raise HTTPException(
             status_code=500,
-            detail=(
-                "CRON_SECRET is not configured."
-            ),
+            detail="CRON_SECRET is not configured.",
         )
 
     if authorization != f"Bearer {cron_secret}":
@@ -537,7 +539,6 @@ def daily_ingestion(
             detail="Unauthorized.",
         )
 
-    # Import ingestion only when cron calls this route.
     try:
         from src.pipelines.daily_market_pipeline import (
             run_daily_pipeline,
