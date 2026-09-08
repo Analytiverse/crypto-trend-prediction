@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
+
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1.0"
     >
-    <title>Crypto Trend Dashboard</title>
+
+    <title>Crypto Market Data Platform</title>
 
     <style>
         * {
@@ -15,153 +18,447 @@
 
         body {
             margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f5f7fb;
+            font-family:
+                Inter,
+                Arial,
+                sans-serif;
+
+            background: #f4f6f9;
             color: #1f2937;
         }
 
+        .header {
+            background: #111827;
+            color: white;
+            padding: 26px 30px;
+        }
+
+        .header-content {
+            max-width: 1450px;
+            margin: auto;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        .header p {
+            margin: 7px 0 0;
+            color: #9ca3af;
+        }
+
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 32px 20px;
-        }
-
-        h1 {
-            margin-bottom: 6px;
-        }
-
-        .subtitle {
-            color: #6b7280;
-            margin-bottom: 30px;
+            max-width: 1450px;
+            margin: auto;
+            padding: 25px;
         }
 
         .status {
-            margin-bottom: 25px;
-            padding: 12px 16px;
             background: white;
-            border-radius: 8px;
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
         }
 
-        .cards {
+        .status-success {
+            color: #047857;
+        }
+
+        .status-error {
+            color: #b91c1c;
+        }
+
+        .stats {
             display: grid;
+
             grid-template-columns:
-                repeat(auto-fit, minmax(210px, 1fr));
-            gap: 16px;
-            margin-bottom: 32px;
+                repeat(
+                    auto-fit,
+                    minmax(180px, 1fr)
+                );
+
+            gap: 15px;
+            margin-bottom: 25px;
         }
 
-        .card {
+        .stat-card {
             background: white;
             padding: 18px;
             border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e5e7eb;
+        }
+
+        .stat-title {
+            color: #6b7280;
+            font-size: 13px;
+            margin-bottom: 7px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .coin-grid {
+            display: grid;
+
+            grid-template-columns:
+                repeat(
+                    auto-fit,
+                    minmax(210px, 1fr)
+                );
+
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .coin-card {
+            background: white;
+            border-radius: 10px;
+            padding: 18px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .coin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .coin-name {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 10px;
+            font-weight: 600;
+            font-size: 17px;
         }
 
         .symbol {
-            color: #6b7280;
-            font-size: 13px;
+            background: #f3f4f6;
+            padding: 5px 8px;
+            border-radius: 6px;
+            font-size: 12px;
         }
 
-        .price {
+        .coin-price {
             font-size: 22px;
-            margin: 10px 0;
+            font-weight: bold;
+            margin: 15px 0;
         }
 
         .metric {
             font-size: 13px;
-            margin-top: 5px;
-            color: #4b5563;
+            color: #6b7280;
+            margin-top: 6px;
         }
 
-        .section {
+        .section-title {
+            margin-top: 35px;
+            margin-bottom: 15px;
+        }
+
+        .section-title h2 {
+            margin-bottom: 5px;
+        }
+
+        .section-title p {
+            color: #6b7280;
+            margin-top: 0;
+        }
+
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .tab {
+            border: 1px solid #d1d5db;
             background: white;
-            padding: 20px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .tab:hover {
+            background: #f9fafb;
+        }
+
+        .tab.active {
+            background: #111827;
+            color: white;
+            border-color: #111827;
+        }
+
+        .table-card {
+            background: white;
+            border: 1px solid #e5e7eb;
             border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .table-header {
+            padding: 16px 18px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .table-header h3 {
+            margin: 0 0 4px;
+        }
+
+        .table-header span {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .table-wrapper {
             overflow-x: auto;
+            max-height: 520px;
+            overflow-y: auto;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-        }
-
-        th,
-        td {
-            text-align: left;
-            padding: 12px;
-            border-bottom: 1px solid #e5e7eb;
-            white-space: nowrap;
+            min-width: 900px;
         }
 
         th {
-            font-size: 13px;
-            color: #6b7280;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+
+            background: #f9fafb;
+            color: #4b5563;
+
+            text-align: left;
+            padding: 11px 12px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 12px;
         }
 
         td {
-            font-size: 14px;
+            padding: 10px 12px;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 12px;
+            white-space: nowrap;
         }
 
-        .error {
-            color: #b91c1c;
+        tr:hover td {
+            background: #f9fafb;
+        }
+
+        .badge-raw {
+            display: inline-block;
+            background: #fef3c7;
+            color: #92400e;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+
+        .badge-clean {
+            display: inline-block;
+            background: #d1fae5;
+            color: #065f46;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .footer {
+            text-align: center;
+            color: #9ca3af;
+            font-size: 12px;
+            padding: 20px;
         }
     </style>
 </head>
 
 <body>
 
-<div class="container">
+<div class="header">
+    <div class="header-content">
 
-    <h1>Crypto Trend Dashboard</h1>
+        <h1>
+            Crypto Market Data Platform
+        </h1>
 
-    <div class="subtitle">
-        Live market data stored in PostgreSQL
+        <p>
+            Automated CoinGecko ingestion,
+            PostgreSQL storage and cleaned market data
+        </p>
+
     </div>
+</div>
+
+
+<div class="container">
 
     <div
         class="status"
         id="status"
     >
-        Loading database data...
+        Connecting to database...
     </div>
 
+
+    <div class="stats">
+
+        <div class="stat-card">
+            <div class="stat-title">
+                Coins
+            </div>
+
+            <div
+                class="stat-value"
+                id="coinCount"
+            >
+                -
+            </div>
+        </div>
+
+
+        <div class="stat-card">
+            <div class="stat-title">
+                Raw History Rows
+            </div>
+
+            <div
+                class="stat-value"
+                id="rawCount"
+            >
+                -
+            </div>
+        </div>
+
+
+        <div class="stat-card">
+            <div class="stat-title">
+                Clean Hourly Rows
+            </div>
+
+            <div
+                class="stat-value"
+                id="cleanCount"
+            >
+                -
+            </div>
+        </div>
+
+
+        <div class="stat-card">
+            <div class="stat-title">
+                Snapshot Rows
+            </div>
+
+            <div
+                class="stat-value"
+                id="snapshotCount"
+            >
+                -
+            </div>
+        </div>
+
+    </div>
+
+
     <div
-        class="cards"
+        class="coin-grid"
         id="coinCards"
     ></div>
 
-    <div class="section">
 
-        <h2>Recent Hourly Market Data</h2>
+    <div class="section-title">
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Coin</th>
-                    <th>Timestamp</th>
-                    <th>Price</th>
-                    <th>Market Cap</th>
-                    <th>Volume</th>
-                </tr>
-            </thead>
+        <h2>
+            Database Explorer
+        </h2>
 
-            <tbody id="recentTable"></tbody>
-        </table>
+        <p>
+            Inspect raw ingestion data and cleaned
+            model-ready data.
+        </p>
 
     </div>
 
+
+    <div class="tabs">
+
+        <button
+            class="tab active"
+            onclick="showTable('rawCoins', this)"
+        >
+            Raw Coins
+        </button>
+
+        <button
+            class="tab"
+            onclick="showTable('rawHistory', this)"
+        >
+            Raw Market History
+        </button>
+
+        <button
+            class="tab"
+            onclick="showTable('rawSnapshots', this)"
+        >
+            Raw Snapshots
+        </button>
+
+        <button
+            class="tab"
+            onclick="showTable('cleanCoins', this)"
+        >
+            Clean Coins
+        </button>
+
+        <button
+            class="tab"
+            onclick="showTable('cleanHistory', this)"
+        >
+            Clean Market History
+        </button>
+
+        <button
+            class="tab"
+            onclick="showTable('cleanSnapshots', this)"
+        >
+            Clean Snapshots
+        </button>
+
+    </div>
+
+
+    <div
+        id="tableContainer"
+    ></div>
+
 </div>
+
+
+<div class="footer">
+    Crypto Trend Prediction Pipeline
+</div>
+
 
 <script>
 
-function money(value) {
-    if (value === null || value === undefined) {
+let dashboardData = null;
+
+
+function formatMoney(value) {
+
+    if (
+        value === null ||
+        value === undefined
+    ) {
         return "-";
     }
 
@@ -170,6 +467,24 @@ function money(value) {
         {
             style: "currency",
             currency: "USD",
+            maximumFractionDigits: 4
+        }
+    ).format(value);
+}
+
+
+function formatNumber(value) {
+
+    if (
+        value === null ||
+        value === undefined
+    ) {
+        return "-";
+    }
+
+    return new Intl.NumberFormat(
+        "en-US",
+        {
             maximumFractionDigits: 2
         }
     ).format(value);
@@ -177,7 +492,11 @@ function money(value) {
 
 
 function compactNumber(value) {
-    if (value === null || value === undefined) {
+
+    if (
+        value === null ||
+        value === undefined
+    ) {
         return "-";
     }
 
@@ -191,132 +510,431 @@ function compactNumber(value) {
 }
 
 
+function formatValue(key, value) {
+
+    if (
+        value === null ||
+        value === undefined
+    ) {
+        return "-";
+    }
+
+    if (
+        key.includes("timestamp") ||
+        key.includes("created_at") ||
+        key.includes("updated_at") ||
+        key.includes("fetched_at")
+    ) {
+
+        const date = new Date(value);
+
+        if (!isNaN(date)) {
+            return date.toLocaleString();
+        }
+    }
+
+    if (
+        key.includes("price")
+    ) {
+        return formatMoney(value);
+    }
+
+    if (
+        key.includes("market_cap") ||
+        key.includes("volume") ||
+        key.includes("supply")
+    ) {
+        return formatNumber(value);
+    }
+
+    return value;
+}
+
+
+function renderCards(latest) {
+
+    const container =
+        document.getElementById("coinCards");
+
+    container.innerHTML = "";
+
+    latest.forEach(coin => {
+
+        const card =
+            document.createElement("div");
+
+        card.className = "coin-card";
+
+        card.innerHTML = `
+            <div class="coin-header">
+
+                <div class="coin-name">
+                    ${coin.name}
+                </div>
+
+                <div class="symbol">
+                    ${coin.symbol.toUpperCase()}
+                </div>
+
+            </div>
+
+            <div class="coin-price">
+                ${formatMoney(coin.price)}
+            </div>
+
+            <div class="metric">
+                Market Cap:
+                ${compactNumber(coin.market_cap)}
+            </div>
+
+            <div class="metric">
+                Volume:
+                ${compactNumber(coin.total_volume)}
+            </div>
+
+            <div class="metric">
+                Updated:
+                ${new Date(
+                    coin.timestamp
+                ).toLocaleString()}
+            </div>
+        `;
+
+        container.appendChild(card);
+    });
+}
+
+
+function renderTable(
+    title,
+    subtitle,
+    rows,
+    type
+) {
+
+    const container =
+        document.getElementById("tableContainer");
+
+    if (!rows || rows.length === 0) {
+
+        container.innerHTML = `
+            <div class="table-card">
+
+                <div class="table-header">
+
+                    <h3>
+                        ${title}
+                    </h3>
+
+                    <span>
+                        No rows available
+                    </span>
+
+                </div>
+
+            </div>
+        `;
+
+        return;
+    }
+
+
+    const columns =
+        Object.keys(rows[0]);
+
+
+    const headers =
+        columns
+            .map(
+                column =>
+                    `<th>${column}</th>`
+            )
+            .join("");
+
+
+    const body =
+        rows
+            .map(row => {
+
+                const cells =
+                    columns
+                        .map(column => {
+
+                            return `
+                                <td>
+                                    ${
+                                        formatValue(
+                                            column,
+                                            row[column]
+                                        )
+                                    }
+                                </td>
+                            `;
+
+                        })
+                        .join("");
+
+                return `<tr>${cells}</tr>`;
+
+            })
+            .join("");
+
+
+    const badge =
+        type === "raw"
+            ? `<span class="badge-raw">RAW</span>`
+            : `<span class="badge-clean">CLEANED</span>`;
+
+
+    container.innerHTML = `
+
+        <div class="table-card">
+
+            <div class="table-header">
+
+                <h3>
+                    ${title}
+                    ${badge}
+                </h3>
+
+                <span>
+                    ${subtitle}
+                    • Showing ${rows.length} rows
+                </span>
+
+            </div>
+
+
+            <div class="table-wrapper">
+
+                <table>
+
+                    <thead>
+                        <tr>
+                            ${headers}
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        ${body}
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+    `;
+}
+
+
+function showTable(name, button) {
+
+    document
+        .querySelectorAll(".tab")
+        .forEach(tab => {
+            tab.classList.remove("active");
+        });
+
+
+    if (button) {
+        button.classList.add("active");
+    }
+
+
+    if (!dashboardData) {
+        return;
+    }
+
+
+    const tables = {
+
+        rawCoins: {
+            title: "Raw Coins",
+            subtitle:
+                "Coin dimension data stored in PostgreSQL",
+            rows:
+                dashboardData.raw.coins,
+            type:
+                "raw"
+        },
+
+        rawHistory: {
+            title: "Raw Market History",
+            subtitle:
+                "Direct historical market observations",
+            rows:
+                dashboardData.raw.market_history,
+            type:
+                "raw"
+        },
+
+        rawSnapshots: {
+            title: "Raw Market Snapshots",
+            subtitle:
+                "Market snapshot observations",
+            rows:
+                dashboardData.raw.market_snapshots,
+            type:
+                "raw"
+        },
+
+        cleanCoins: {
+            title: "Clean Coins",
+            subtitle:
+                "Canonical coin dimension used by the pipeline",
+            rows:
+                dashboardData.cleaned.coins,
+            type:
+                "clean"
+        },
+
+        cleanHistory: {
+            title: "Clean Market History",
+            subtitle:
+                "Hourly normalized and deduplicated data",
+            rows:
+                dashboardData.cleaned.market_history,
+            type:
+                "clean"
+        },
+
+        cleanSnapshots: {
+            title: "Clean Market Snapshots",
+            subtitle:
+                "Hourly deduplicated snapshot view",
+            rows:
+                dashboardData.cleaned.market_snapshots,
+            type:
+                "clean"
+        }
+
+    };
+
+
+    const table =
+        tables[name];
+
+
+    renderTable(
+        table.title,
+        table.subtitle,
+        table.rows,
+        table.type
+    );
+}
+
+
 async function loadDashboard() {
 
-    const status = document.getElementById("status");
+    const status =
+        document.getElementById("status");
 
     try {
 
-        const response = await fetch("/api/market-data");
+        const response =
+            await fetch("/api/market-data");
+
 
         if (!response.ok) {
+
             throw new Error(
                 `API returned ${response.status}`
             );
+
         }
 
-        const data = await response.json();
 
-        const cards =
-            document.getElementById("coinCards");
+        dashboardData =
+            await response.json();
 
-        cards.innerHTML = "";
 
-        data.latest.forEach(coin => {
+        renderCards(
+            dashboardData.latest
+        );
 
-            const card =
-                document.createElement("div");
 
-            card.className = "card";
+        document
+            .getElementById("coinCount")
+            .textContent =
+                formatNumber(
+                    dashboardData.counts.coins
+                );
 
-            card.innerHTML = `
-                <div class="coin-name">
-                    ${coin.name}
-                    <span class="symbol">
-                        ${coin.symbol.toUpperCase()}
-                    </span>
-                </div>
 
-                <div class="price">
-                    ${money(coin.price)}
-                </div>
+        document
+            .getElementById("rawCount")
+            .textContent =
+                formatNumber(
+                    dashboardData.counts.raw_history
+                );
 
-                <div class="metric">
-                    Market Cap:
-                    ${compactNumber(coin.market_cap)}
-                </div>
 
-                <div class="metric">
-                    Volume:
-                    ${compactNumber(coin.total_volume)}
-                </div>
+        document
+            .getElementById("cleanCount")
+            .textContent =
+                formatNumber(
+                    dashboardData.counts.clean_history
+                );
 
-                <div class="metric">
-                    Updated:
-                    ${new Date(
-                        coin.timestamp
-                    ).toLocaleString()}
-                </div>
+
+        document
+            .getElementById("snapshotCount")
+            .textContent =
+                formatNumber(
+                    dashboardData.counts.snapshots
+                );
+
+
+        if (
+            dashboardData.latest.length > 0
+        ) {
+
+            const latest =
+                dashboardData.latest
+                    .map(
+                        row =>
+                            new Date(
+                                row.timestamp
+                            )
+                    )
+                    .sort(
+                        (a, b) => b - a
+                    )[0];
+
+
+            status.innerHTML = `
+                <span class="status-success">
+                    ● Database connected
+                </span>
+
+                &nbsp; | &nbsp;
+
+                Latest market data:
+                ${latest.toLocaleString()}
             `;
 
-            cards.appendChild(card);
-        });
-
-
-        const table =
-            document.getElementById("recentTable");
-
-        table.innerHTML = "";
-
-        data.recent.forEach(row => {
-
-            const tr =
-                document.createElement("tr");
-
-            tr.innerHTML = `
-                <td>
-                    ${row.name}
-                    (${row.symbol.toUpperCase()})
-                </td>
-
-                <td>
-                    ${new Date(
-                        row.timestamp
-                    ).toLocaleString()}
-                </td>
-
-                <td>
-                    ${money(row.price)}
-                </td>
-
-                <td>
-                    ${compactNumber(row.market_cap)}
-                </td>
-
-                <td>
-                    ${compactNumber(row.total_volume)}
-                </td>
-            `;
-
-            table.appendChild(tr);
-        });
-
-
-        if (data.latest.length > 0) {
-
-            const latestTimestamp =
-                data.latest
-                    .map(row => new Date(row.timestamp))
-                    .sort((a, b) => b - a)[0];
-
-            status.textContent =
-                `Database connected | Latest data: ${
-                    latestTimestamp.toLocaleString()
-                }`;
         }
-        else {
-            status.textContent =
-                "Database connected, but no market data was found.";
-        }
+
+
+        showTable(
+            "rawCoins",
+            document.querySelector(
+                ".tab.active"
+            )
+        );
 
     }
+
     catch (error) {
 
-        status.textContent =
-            `Failed to load dashboard: ${error.message}`;
+        status.innerHTML = `
+            <span class="status-error">
+                Database connection failed:
+                ${error.message}
+            </span>
+        `;
 
-        status.className =
-            "status error";
     }
 }
 
