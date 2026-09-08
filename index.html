@@ -1,597 +1,806 @@
 <script>
 let dashboardData = null;
 
-const money = (value) => value === null || value === undefined
-  ? "-"
-  : new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 4
-    }).format(value);
 
-const number = (value) => value === null || value === undefined
-  ? "-"
-  : new Intl.NumberFormat("en-US", {
-      maximumFractionDigits: 2
-    }).format(value);
+/* =========================
+   HELPER FUNCTIONS
+========================= */
 
-const compact = (value) => value === null || value === undefined
-  ? "-"
-  : new Intl.NumberFormat("en-US", {
-      notation: "compact",
-      maximumFractionDigits: 2
-    }).format(value);
+function getElement(id) {
+    return document.getElementById(id);
+}
 
+function setText(id, value) {
+    const element = getElement(id);
 
-function formatValue(key, value) {
+    if (element) {
+        element.textContent = value;
+    }
+}
 
-  if (value === null || value === undefined) {
-    return "-";
-  }
+function money(value) {
+    if (value === null || value === undefined) {
+        return "-";
+    }
 
-  if (
-    ["timestamp", "created_at", "updated_at", "fetched_at"]
-      .some(part => key.includes(part))
-  ) {
+    return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 4
+    }).format(Number(value));
+}
+
+function number(value) {
+    if (value === null || value === undefined) {
+        return "-";
+    }
+
+    return new Intl.NumberFormat("en-US", {
+        maximumFractionDigits: 2
+    }).format(Number(value));
+}
+
+function compact(value) {
+    if (value === null || value === undefined) {
+        return "-";
+    }
+
+    return new Intl.NumberFormat("en-US", {
+        notation: "compact",
+        maximumFractionDigits: 2
+    }).format(Number(value));
+}
+
+function formatDate(value) {
+    if (!value) {
+        return "-";
+    }
 
     const date = new Date(value);
 
-    if (!isNaN(date)) {
-      return date.toLocaleString();
+    if (isNaN(date.getTime())) {
+        return value;
     }
-  }
 
-  if (key.includes("price")) {
-    return money(value);
-  }
-
-  if (
-    key.includes("market_cap") ||
-    key.includes("volume") ||
-    key.includes("supply")
-  ) {
-    return number(value);
-  }
-
-  return value;
+    return date.toLocaleString();
 }
 
+function formatValue(key, value) {
+
+    if (value === null || value === undefined) {
+        return "-";
+    }
+
+    const lowerKey = key.toLowerCase();
+
+    if (
+        lowerKey.includes("timestamp") ||
+        lowerKey.includes("created_at") ||
+        lowerKey.includes("updated_at") ||
+        lowerKey.includes("fetched_at")
+    ) {
+        return formatDate(value);
+    }
+
+    if (lowerKey.includes("price")) {
+        return money(value);
+    }
+
+    if (
+        lowerKey.includes("market_cap") ||
+        lowerKey.includes("volume") ||
+        lowerKey.includes("supply")
+    ) {
+        return number(value);
+    }
+
+    return value;
+}
+
+
+/* =========================
+   COIN CARDS
+========================= */
 
 function renderCards(rows) {
 
-  const container = document.getElementById("coinCards");
+    const container = getElement("coinCards");
 
-  container.innerHTML = rows.map(coin => `
-    <article class="coin-card">
+    if (!container) {
+        console.warn("coinCards element not found");
+        return;
+    }
 
-      <div class="coin-top">
+    if (!Array.isArray(rows) || rows.length === 0) {
 
-        <div class="coin-name">
-          ${coin.name}
-        </div>
+        container.innerHTML = `
+            <div class="empty">
+                No latest coin data available.
+            </div>
+        `;
 
-        <div class="symbol">
-          ${String(coin.symbol).toUpperCase()}
-        </div>
+        return;
+    }
 
-      </div>
+    container.innerHTML = rows.map(coin => `
 
-      <div class="coin-price">
-        ${money(coin.price)}
-      </div>
+        <article class="coin-card">
 
-      <div class="metric">
-        Market Cap:
-        ${compact(coin.market_cap)}
-      </div>
+            <div class="coin-top">
 
-      <div class="metric">
-        Volume:
-        ${compact(coin.total_volume)}
-      </div>
+                <div class="coin-name">
+                    ${coin.name || coin.coin_id || "-"}
+                </div>
 
-      <div class="metric">
-        Latest observation:
-        ${new Date(coin.timestamp).toLocaleString()}
-      </div>
+                <div class="symbol">
+                    ${
+                        coin.symbol
+                            ? String(coin.symbol).toUpperCase()
+                            : "-"
+                    }
+                </div>
 
-    </article>
-  `).join("");
+            </div>
+
+
+            <div class="coin-price">
+                ${money(coin.price)}
+            </div>
+
+
+            <div class="metric">
+                Market Cap:
+                ${compact(coin.market_cap)}
+            </div>
+
+
+            <div class="metric">
+                Volume:
+                ${compact(coin.total_volume)}
+            </div>
+
+
+            <div class="metric">
+                Latest observation:
+                ${formatDate(coin.timestamp)}
+            </div>
+
+        </article>
+
+    `).join("");
 }
 
+
+/* =========================
+   TABLE
+========================= */
 
 function renderTable(definition) {
 
-  const container =
-    document.getElementById("tableContainer");
+    const container = getElement("tableContainer");
 
-  const rows =
-    definition.rows || [];
+    if (!container) {
+        console.error("tableContainer element not found");
+        return;
+    }
+
+    if (!definition) {
+
+        container.innerHTML = `
+            <div class="empty">
+                Table configuration not found.
+            </div>
+        `;
+
+        return;
+    }
 
 
-  if (!rows.length) {
+    const rows = Array.isArray(definition.rows)
+        ? definition.rows
+        : [];
+
+
+    if (rows.length === 0) {
+
+        container.innerHTML = `
+
+            <div class="panel">
+
+                <div class="panel-head">
+
+                    <div>
+
+                        <h3>
+                            ${definition.title}
+                        </h3>
+
+                        <p>
+                            ${definition.subtitle}
+                        </p>
+
+                    </div>
+
+                    <span class="badge ${definition.type}">
+                        ${definition.type.toUpperCase()}
+                    </span>
+
+                </div>
+
+                <div class="empty">
+                    No rows available for this table.
+                </div>
+
+            </div>
+        `;
+
+        return;
+    }
+
+
+    const columns = Object.keys(rows[0]);
+
+
+    const header = columns.map(column => `
+
+        <th>
+            ${column.replaceAll("_", " ")}
+        </th>
+
+    `).join("");
+
+
+    const body = rows.map(row => `
+
+        <tr>
+
+            ${columns.map(column => `
+
+                <td>
+                    ${formatValue(column, row[column])}
+                </td>
+
+            `).join("")}
+
+        </tr>
+
+    `).join("");
+
 
     container.innerHTML = `
-      <div class="panel">
 
-        <div class="panel-head">
+        <div class="panel">
 
-          <div>
-            <h3>${definition.title}</h3>
-            <p>${definition.subtitle}</p>
-          </div>
+            <div class="panel-head">
 
-          <span class="badge ${definition.type}">
-            ${definition.type.toUpperCase()}
-          </span>
+                <div>
+
+                    <h3>
+                        ${definition.title}
+                    </h3>
+
+                    <p>
+                        ${definition.subtitle}
+                        • Showing ${rows.length} rows
+                    </p>
+
+                </div>
+
+
+                <span class="badge ${definition.type}">
+                    ${definition.type.toUpperCase()}
+                </span>
+
+            </div>
+
+
+            <div class="table-wrap">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+                            ${header}
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+                        ${body}
+                    </tbody>
+
+                </table>
+
+            </div>
 
         </div>
-
-        <div class="empty">
-          No rows available.
-        </div>
-
-      </div>
     `;
-
-    return;
-  }
-
-
-  const columns =
-    Object.keys(rows[0]);
-
-
-  const header =
-    columns
-      .map(
-        col =>
-          `<th>${col.replaceAll("_", " ")}</th>`
-      )
-      .join("");
-
-
-  const body =
-    rows
-      .map(
-        row => `
-          <tr>
-            ${
-              columns
-                .map(
-                  col =>
-                    `<td>${formatValue(col, row[col])}</td>`
-                )
-                .join("")
-            }
-          </tr>
-        `
-      )
-      .join("");
-
-
-  container.innerHTML = `
-
-    <div class="panel">
-
-      <div class="panel-head">
-
-        <div>
-
-          <h3>
-            ${definition.title}
-          </h3>
-
-          <p>
-            ${definition.subtitle}
-            • Showing ${rows.length} rows
-          </p>
-
-        </div>
-
-        <span class="badge ${definition.type}">
-          ${definition.type.toUpperCase()}
-        </span>
-
-      </div>
-
-
-      <div class="table-wrap">
-
-        <table>
-
-          <thead>
-            <tr>
-              ${header}
-            </tr>
-          </thead>
-
-          <tbody>
-            ${body}
-          </tbody>
-
-        </table>
-
-      </div>
-
-    </div>
-  `;
 }
 
+
+/* =========================
+   TABLE DEFINITIONS
+========================= */
 
 function getTables() {
 
-  return {
+    return {
 
-    rawCoins: {
+        rawCoins: {
 
-      title:
-        "Coins",
+            title: "Coins",
 
-      subtitle:
-        "Tracked coins used for CoinGecko ingestion",
+            subtitle:
+                "Coins configured for CoinGecko ingestion",
 
-      rows:
-        dashboardData.raw.coins,
+            rows:
+                dashboardData?.raw?.coins || [],
 
-      type:
-        "raw"
-    },
-
-
-    rawMarket: {
-
-      title:
-        "Raw Market Data",
-
-      subtitle:
-        "Market snapshot records fetched from CoinGecko before cleaning",
-
-      rows:
-        dashboardData.raw.market_snapshots,
-
-      type:
-        "raw"
-    },
+            type:
+                "raw"
+        },
 
 
-    rawHistory: {
+        rawMarket: {
 
-      title:
-        "Raw Historical Market Data",
+            title:
+                "Raw Market Data",
 
-      subtitle:
-        "Historical price, market cap and volume observations before cleaning",
+            subtitle:
+                "Market snapshot data fetched from CoinGecko before cleaning",
 
-      rows:
-        dashboardData.raw.market_history,
+            rows:
+                dashboardData?.raw?.market_snapshots || [],
 
-      type:
-        "raw"
-    },
-
-
-    cleanMarket: {
-
-      title:
-        "Cleaned Market Data",
-
-      subtitle:
-        "Market data after null removal and duplicate handling",
-
-      rows:
-        dashboardData.cleaned.market_snapshots,
-
-      type:
-        "clean"
-    },
+            type:
+                "raw"
+        },
 
 
-    cleanHistory: {
+        rawHistory: {
 
-      title:
-        "Cleaned Historical Data",
+            title:
+                "Raw Historical Data",
 
-      subtitle:
-        "Normalized hourly historical data after null and duplicate validation",
+            subtitle:
+                "Historical price, market cap and volume before cleaning",
 
-      rows:
-        dashboardData.cleaned.market_history,
+            rows:
+                dashboardData?.raw?.market_history || [],
 
-      type:
-        "clean"
-    },
+            type:
+                "raw"
+        },
 
 
-    merged: {
+        cleanMarket: {
 
-      title:
-        "Merged Market Table",
+            title:
+                "Cleaned Market Data",
 
-      subtitle:
-        "Final model-ready dataset containing coin, timestamp, price, market cap and volume",
+            subtitle:
+                "Market snapshot data after removing null and invalid records",
 
-      rows:
-        dashboardData.merged,
+            rows:
+                dashboardData?.cleaned?.market_snapshots || [],
 
-      type:
-        "merged"
-    }
+            type:
+                "clean"
+        },
 
-  };
+
+        cleanHistory: {
+
+            title:
+                "Cleaned Historical Data",
+
+            subtitle:
+                "Hourly historical data after cleaning, normalization and duplicate removal",
+
+            rows:
+                dashboardData?.cleaned?.market_history || [],
+
+            type:
+                "clean"
+        },
+
+
+        merged: {
+
+            title:
+                "Merged Market Dataset",
+
+            subtitle:
+                "Final dataset containing coin, timestamp, price, market cap and volume",
+
+            rows:
+                dashboardData?.merged || [],
+
+            type:
+                "merged"
+        }
+    };
 }
 
 
+/* =========================
+   SWITCH TABLE
+========================= */
+
 function showTable(name) {
 
-  if (!dashboardData) {
-    return;
-  }
+    if (!dashboardData) {
+        console.warn("Dashboard data has not loaded yet");
+        return;
+    }
 
 
-  document
+    document
+        .querySelectorAll(".nav-button")
+        .forEach(button => {
+
+            button.classList.toggle(
+                "active",
+                button.dataset.table === name
+            );
+
+        });
+
+
+    const tables = getTables();
+
+    const selectedTable = tables[name];
+
+
+    if (!selectedTable) {
+
+        console.error(
+            "Table does not exist:",
+            name
+        );
+
+        return;
+    }
+
+
+    renderTable(selectedTable);
+}
+
+
+/* =========================
+   NAVIGATION
+========================= */
+
+document
     .querySelectorAll(".nav-button")
-    .forEach(btn => {
+    .forEach(button => {
 
-      btn.classList.toggle(
-        "active",
-        btn.dataset.table === name
-      );
+        button.addEventListener(
+            "click",
+            function () {
+
+                const tableName =
+                    this.dataset.table;
+
+                showTable(tableName);
+
+            }
+        );
 
     });
 
 
-  const tables =
-    getTables();
-
-
-  if (!tables[name]) {
-
-    console.error(
-      `Unknown table: ${name}`
-    );
-
-    return;
-  }
-
-
-  renderTable(
-    tables[name]
-  );
-}
-
-
-document
-  .querySelectorAll(".nav-button")
-  .forEach(button => {
-
-    button.addEventListener(
-      "click",
-      () => {
-
-        showTable(
-          button.dataset.table
-        );
-
-      }
-    );
-
-  });
-
+/* =========================
+   LOAD DATA FROM API
+========================= */
 
 async function loadDashboard() {
 
-  const status =
-    document.getElementById("status");
+    const status = getElement("status");
 
 
-  try {
+    try {
 
-    status.innerHTML =
-      `<span>Loading database data...</span>`;
+        if (status) {
+
+            status.innerHTML = `
+                <span>
+                    Loading PostgreSQL data...
+                </span>
+            `;
+        }
 
 
-    const response =
-      await fetch("/api/market-data");
+        console.log(
+            "Calling /api/market-data..."
+        );
 
 
-    if (!response.ok) {
+        const response =
+            await fetch(
+                "/api/market-data",
+                {
+                    method: "GET",
+                    headers: {
+                        "Accept": "application/json"
+                    }
+                }
+            );
 
-      throw new Error(
-        `API returned ${response.status}`
-      );
+
+        console.log(
+            "API HTTP status:",
+            response.status
+        );
+
+
+        const responseText =
+            await response.text();
+
+
+        console.log(
+            "Raw API response:",
+            responseText
+        );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                `API returned ${response.status}: ${responseText}`
+            );
+        }
+
+
+        try {
+
+            dashboardData =
+                JSON.parse(responseText);
+
+        } catch (jsonError) {
+
+            throw new Error(
+                "API did not return valid JSON"
+            );
+        }
+
+
+        console.log(
+            "Dashboard data:",
+            dashboardData
+        );
+
+
+        /* =========================
+           LATEST COIN CARDS
+        ========================= */
+
+        renderCards(
+            dashboardData.latest || []
+        );
+
+
+        /* =========================
+           COUNTS
+        ========================= */
+
+        const counts =
+            dashboardData.counts || {};
+
+
+        setText(
+            "coinCount",
+            number(
+                counts.coins || 0
+            )
+        );
+
+
+        setText(
+            "rawCount",
+            number(
+                counts.raw_history || 0
+            )
+        );
+
+
+        setText(
+            "cleanCount",
+            number(
+                counts.clean_history || 0
+            )
+        );
+
+
+        setText(
+            "snapshotCount",
+            number(
+                counts.snapshots || 0
+            )
+        );
+
+
+        /* =========================
+           QUALITY
+        ========================= */
+
+        const quality =
+            dashboardData.quality || {};
+
+
+        setText(
+            "rawHistoryNulls",
+            number(
+                quality.raw_history_null_rows || 0
+            )
+        );
+
+
+        setText(
+            "rawHistoryDuplicates",
+            number(
+                quality.raw_history_duplicate_rows || 0
+            )
+        );
+
+
+        setText(
+            "cleanHistoryNulls",
+            number(
+                quality.clean_history_null_rows || 0
+            )
+        );
+
+
+        setText(
+            "cleanHistoryDuplicates",
+            number(
+                quality.clean_history_duplicate_rows || 0
+            )
+        );
+
+
+        /* =========================
+           CONNECTION STATUS
+        ========================= */
+
+        const latestRows =
+            dashboardData.latest || [];
+
+
+        const validDates =
+            latestRows
+                .map(row => new Date(row.timestamp))
+                .filter(
+                    date =>
+                        !isNaN(date.getTime())
+                );
+
+
+        validDates.sort(
+            (a, b) => b - a
+        );
+
+
+        const latestDate =
+            validDates.length
+                ? validDates[0]
+                : null;
+
+
+        if (status) {
+
+            if (latestDate) {
+
+                status.innerHTML = `
+
+                    <span class="status-success">
+                        ● Database connected
+                    </span>
+
+                    <span>
+                        Latest observation:
+                        ${latestDate.toLocaleString()}
+                    </span>
+                `;
+
+            } else {
+
+                status.innerHTML = `
+
+                    <span class="status-success">
+                        ● Database connected
+                    </span>
+
+                    <span>
+                        Data loaded successfully
+                    </span>
+                `;
+            }
+        }
+
+
+        /* =========================
+           DEFAULT TABLE
+        ========================= */
+
+        showTable(
+            "rawCoins"
+        );
 
     }
 
+    catch (error) {
 
-    dashboardData =
-      await response.json();
-
-
-    console.log(
-      "Dashboard API response:",
-      dashboardData
-    );
-
-
-    /*
-    ------------------------------------------------
-    COIN CARDS
-    ------------------------------------------------
-    */
-
-    renderCards(
-      dashboardData.latest || []
-    );
-
-
-    /*
-    ------------------------------------------------
-    DATA COUNTS
-    ------------------------------------------------
-    */
-
-    document
-      .getElementById("coinCount")
-      .textContent =
-        number(
-          dashboardData.counts.coins
+        console.error(
+            "Dashboard loading failed:",
+            error
         );
 
 
-    document
-      .getElementById("rawCount")
-      .textContent =
-        number(
-          dashboardData.counts.raw_history
-        );
+        if (status) {
+
+            status.innerHTML = `
+
+                <span class="status-error">
+
+                    Failed to load data:
+                    ${error.message}
+
+                </span>
+            `;
+        }
 
 
-    document
-      .getElementById("cleanCount")
-      .textContent =
-        number(
-          dashboardData.counts.clean_history
-        );
+        const container =
+            getElement("tableContainer");
 
 
-    document
-      .getElementById("snapshotCount")
-      .textContent =
-        number(
-          dashboardData.counts.snapshots
-        );
+        if (container) {
 
+            container.innerHTML = `
 
-    /*
-    ------------------------------------------------
-    DATA QUALITY
-    ------------------------------------------------
-    */
+                <div class="panel">
 
-    const quality =
-      dashboardData.quality || {};
+                    <h3>
+                        Unable to load dashboard data
+                    </h3>
 
+                    <p>
+                        ${error.message}
+                    </p>
 
-    document
-      .getElementById("rawHistoryNulls")
-      .textContent =
-        number(
-          quality.raw_history_null_rows || 0
-        );
+                    <p>
+                        Open this URL directly to check the API:
+                    </p>
 
+                    <code>
+                        /api/market-data
+                    </code>
 
-    document
-      .getElementById("rawHistoryDuplicates")
-      .textContent =
-        number(
-          quality.raw_history_duplicate_rows || 0
-        );
-
-
-    document
-      .getElementById("cleanHistoryNulls")
-      .textContent =
-        number(
-          quality.clean_history_null_rows || 0
-        );
-
-
-    document
-      .getElementById("cleanHistoryDuplicates")
-      .textContent =
-        number(
-          quality.clean_history_duplicate_rows || 0
-        );
-
-
-    /*
-    ------------------------------------------------
-    DATABASE STATUS
-    ------------------------------------------------
-    */
-
-    const latestDates =
-      (dashboardData.latest || [])
-        .map(
-          row =>
-            new Date(row.timestamp)
-        )
-        .filter(
-          date =>
-            !isNaN(date)
-        );
-
-
-    const latest =
-      latestDates
-        .sort(
-          (a, b) =>
-            b - a
-        )[0];
-
-
-    if (latest) {
-
-      status.innerHTML = `
-
-        <span class="status-success">
-          ● Database connected
-        </span>
-
-        <span>
-          Latest market observation:
-          ${latest.toLocaleString()}
-        </span>
-      `;
-
-    } else {
-
-      status.innerHTML = `
-
-        <span class="status-success">
-          ● Database connected
-        </span>
-
-        <span>
-          No latest market observation available
-        </span>
-      `;
+                </div>
+            `;
+        }
     }
-
-
-    /*
-    ------------------------------------------------
-    DEFAULT TABLE
-    ------------------------------------------------
-    */
-
-    showTable(
-      "rawCoins"
-    );
-
-  }
-
-  catch (error) {
-
-    console.error(
-      "Dashboard load error:",
-      error
-    );
-
-
-    status.innerHTML = `
-
-      <span class="status-error">
-
-        Database connection failed:
-        ${error.message}
-
-      </span>
-    `;
-  }
 }
 
 
-loadDashboard();
+/* =========================
+   START APPLICATION
+========================= */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        console.log(
+            "Dashboard frontend started"
+        );
+
+        loadDashboard();
+
+    }
+);
 </script>
