@@ -1,62 +1,93 @@
-import os
 from datetime import datetime, timezone
 
 import pandas as pd
 
 from src.api.coingecko_client import CoinGeckoClient
-from config import (
-    COINS,
-    RAW_SNAPSHOT_FILE,
-    VS_CURRENCY,
-)
+from src.config import COINS, VS_CURRENCY
 
 
 client = CoinGeckoClient()
 
 
 def fetch_market_data():
+    """
+    Fetch current market data for configured coins
+    from CoinGecko /coins/markets.
+    """
+
+    print("Fetching current market data...")
+
+    coin_ids = ",".join(COINS)
+
     params = {
         "vs_currency": VS_CURRENCY,
-        "ids": ",".join(COINS),
-        "price_change_percentage": "1h,24h,7d",
+        "ids": coin_ids,
+        "order": "market_cap_desc",
+        "per_page": len(COINS),
+        "page": 1,
         "sparkline": "false",
+        "price_change_percentage": "1h,24h,7d",
     }
 
-    return client.get(
-        endpoint="/coins/markets",
+    data = client.get(
+        "/coins/markets",
         params=params,
     )
 
+    if not isinstance(data, list):
+        raise RuntimeError(
+            "Unexpected response from CoinGecko /coins/markets"
+        )
 
-def transform_market_data(
-    data,
-):
-    collected_at = (
-        datetime
-        .now(timezone.utc)
-        .isoformat()
+    return data
+
+
+def transform_market_data(data):
+    """
+    Convert CoinGecko market response
+    into a normalized DataFrame.
+    """
+
+    collected_at = datetime.now(
+        timezone.utc
     )
 
     rows = []
 
     for coin in data:
-        try:
-            row = {
-                "coin_id": coin["id"],
-                "symbol": coin["symbol"].upper(),
-                "name": coin["name"],
-                "current_price": coin["current_price"],
-                "market_cap": coin["market_cap"],
-                "market_cap_rank": coin["market_cap_rank"],
-                "total_volume": coin["total_volume"],
-                "high_24h": coin["high_24h"],
-                "low_24h": coin["low_24h"],
-                "price_change_24h":
-                    coin["price_change_24h"],
+
+        rows.append(
+            {
+                "coin_id": coin.get("id"),
+                "symbol": (
+                    coin.get("symbol") or ""
+                ).upper(),
+                "name": coin.get("name"),
+                "current_price": coin.get(
+                    "current_price"
+                ),
+                "market_cap": coin.get(
+                    "market_cap"
+                ),
+                "market_cap_rank": coin.get(
+                    "market_cap_rank"
+                ),
+                "total_volume": coin.get(
+                    "total_volume"
+                ),
+                "high_24h": coin.get(
+                    "high_24h"
+                ),
+                "low_24h": coin.get(
+                    "low_24h"
+                ),
+                "price_change_24h": coin.get(
+                    "price_change_24h"
+                ),
                 "price_change_percentage_24h":
-                    coin[
+                    coin.get(
                         "price_change_percentage_24h"
-                    ],
+                    ),
                 "price_change_percentage_1h":
                     coin.get(
                         "price_change_percentage_1h_in_currency"
@@ -66,139 +97,78 @@ def transform_market_data(
                         "price_change_percentage_7d_in_currency"
                     ),
                 "circulating_supply":
-                    coin["circulating_supply"],
+                    coin.get(
+                        "circulating_supply"
+                    ),
+                "total_supply":
+                    coin.get(
+                        "total_supply"
+                    ),
+                "max_supply":
+                    coin.get(
+                        "max_supply"
+                    ),
                 "last_updated":
-                    coin["last_updated"],
+                    coin.get(
+                        "last_updated"
+                    ),
                 "collected_at":
                     collected_at,
             }
-
-            rows.append(row)
-
-        except KeyError as exc:
-            print(
-                f"Skipping malformed coin record. "
-                f"Missing field: {exc}"
-            )
-
-    return pd.DataFrame(rows)
-
-
-def save_without_duplicates(
-    new_df,
-):
-    if os.path.exists(RAW_SNAPSHOT_FILE):
-        existing_df = pd.read_csv(
-            RAW_SNAPSHOT_FILE
         )
 
-        combined_df = pd.concat(
-            [
-                existing_df,
-                new_df,
-            ],
-            ignore_index=True,
-        )
+    df = pd.DataFrame(rows)
 
-    else:
-        combined_df = new_df.copy()
-
-    combined_df = (
-        combined_df
-        .drop_duplicates(
-            subset=[
-                "coin_id",
-                "last_updated",
-            ],
-            keep="last",
-        )
-        .sort_values(
-            [
-                "coin_id",
-                "last_updated",
-            ]
-        )
-        .reset_index(drop=True)
-    )
-
-    combined_df.to_csv(
-        RAW_SNAPSHOT_FILE,
-        index=False,
-    )
-
-    print(
-        f"Fetched rows in this run: "
-        f"{len(new_df)}"
-    )
-
-    print(
-        f"Total unique rows stored: "
-        f"{len(combined_df)}"
-    )
+    return df
 
 
 def main():
-    print(
-        "Fetching current market data..."
-    )
+    """
+    Test current market fetch locally.
+    Does not save CSV.
+    """
 
     try:
-        data = fetch_market_data()
 
-        if data is None:
-            print(
-                "Snapshot ingestion failed "
-                "because the API request did not succeed."
-            )
-
-            return
-
-        if not isinstance(data, list):
-            print(
-                "Unexpected response format "
-                "from CoinGecko."
-            )
-
-            return
+        raw_data = fetch_market_data()
 
         df = transform_market_data(
-            data
+            raw_data
         )
+
+        print()
+        print(
+            f"Fetched {len(df)} coin records"
+        )
+        print()
 
         if df.empty:
             print(
-                "No valid market snapshot "
-                "records were returned."
+                "No market data returned."
             )
-
             return
 
-        try:
-            save_without_duplicates(
-                df
-            )
+        display_columns = [
+            "coin_id",
+            "symbol",
+            "current_price",
+            "market_cap",
+            "total_volume",
+            "last_updated",
+        ]
 
-        except PermissionError:
-            print(
-                f"Could not write to "
-                f"{RAW_SNAPSHOT_FILE}."
+        print(
+            df[
+                display_columns
+            ].to_string(
+                index=False
             )
-
-            print(
-                "Make sure the CSV is not "
-                "currently open in Excel."
-            )
-
-        except Exception as exc:
-            print(
-                f"Failed while saving "
-                f"snapshot data: {exc}"
-            )
+        )
 
     except Exception as exc:
+
         print(
-            f"Snapshot ingestion failed: "
-            f"{exc}"
+            f"Market fetch failed: {exc}"
         )
 
 

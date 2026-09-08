@@ -1,167 +1,234 @@
-from config import COINS
+from src.config import COINS
+
 from src.database.repository import (
     upsert_hourly_history,
     upsert_raw_history,
+    upsert_market_snapshots,
 )
+
 from src.ingestion.fetch_history import (
     fetch_coin_history,
     transform_history,
 )
-from src.processing.clean_history import clean_history_dataframe
+
+from src.ingestion.fetch_market_snapshot import (
+    fetch_market_data,
+    transform_market_data,
+)
+
+from src.processing.clean_history import (
+    clean_history_dataframe,
+)
 
 
+# We fetch the most recent 2 days of hourly history
+# so the daily pipeline can safely catch any missing observations.
 RECENT_HISTORY_DAYS = 2
+
+
+def process_market_snapshots():
+    """
+    Fetch the latest /coins/markets data for all configured coins
+    and store it in the market_snapshots table.
+    """
+
+    print("\nFetching current market snapshots...")
+
+    try:
+        raw_data = fetch_market_data()
+
+        if not raw_data:
+            print("No market snapshot data returned.")
+            return 0
+
+        snapshot_df = transform_market_data(raw_data)
+
+        if snapshot_df is None or snapshot_df.empty:
+            print("Snapshot DataFrame is empty.")
+            return 0
+
+        print(
+            f"Fetched {len(snapshot_df)} current market snapshot rows."
+        )
+
+        rows_upserted = upsert_market_snapshots(
+            snapshot_df
+        )
+
+        print(
+            f"{rows_upserted} market snapshot rows upserted."
+        )
+
+        return rows_upserted
+
+    except Exception as exc:
+        print(
+            f"Market snapshot processing failed: {exc}"
+        )
+        return 0
 
 
 def process_coin(coin_id):
     """
-    Fetch recent CoinGecko history for one coin,
-    store raw observations, clean them, and store hourly data.
+    Fetch recent historical data for one coin,
+    store raw data, clean it, and store hourly data.
     """
+
     print(f"\nProcessing {coin_id}...")
 
     try:
-        data = fetch_coin_history(
-            coin_id=coin_id,
+        # -----------------------------------------
+        # 1. Fetch recent CoinGecko history
+        # -----------------------------------------
+        raw_response = fetch_coin_history(
+            coin_id,
             days=RECENT_HISTORY_DAYS,
         )
 
-        if data is None:
-            print(f"{coin_id}: API request failed.")
-
-            return {
-                "coin_id": coin_id,
-                "success": False,
-                "raw_rows": 0,
-                "hourly_rows": 0,
-                "error": "API request failed",
-            }
-
+        # -----------------------------------------
+        # 2. Transform API response
+        # -----------------------------------------
         raw_df = transform_history(
-            coin_id=coin_id,
-            data=data,
+            coin_id,
+            raw_response,
         )
 
-        if raw_df.empty:
-            print(f"{coin_id}: no usable observations returned.")
+        if raw_df is None or raw_df.empty:
+            raise RuntimeError(
+                f"No historical data returned for {coin_id}"
+            )
 
-            return {
-                "coin_id": coin_id,
-                "success": False,
-                "raw_rows": 0,
-                "hourly_rows": 0,
-                "error": "No usable observations returned",
-            }
+        # -----------------------------------------
+        # 3. Store RAW history
+        # -----------------------------------------
+        raw_rows = upsert_raw_history(
+            raw_df
+        )
 
-        raw_count = upsert_raw_history(raw_df)
+        # -----------------------------------------
+        # 4. Clean / normalize history
+        # -----------------------------------------
+        clean_df = clean_history_dataframe(
+            raw_df
+        )
 
-        clean_df = clean_history_dataframe(raw_df)
+        if clean_df is None or clean_df.empty:
+            raise RuntimeError(
+                f"No cleaned data produced for {coin_id}"
+            )
 
-        if clean_df.empty:
-            print(f"{coin_id}: no rows remained after cleaning.")
-
-            return {
-                "coin_id": coin_id,
-                "success": False,
-                "raw_rows": raw_count,
-                "hourly_rows": 0,
-                "error": "No rows remained after cleaning",
-            }
-
-        hourly_count = upsert_hourly_history(clean_df)
+        # -----------------------------------------
+        # 5. Store CLEAN hourly history
+        # -----------------------------------------
+        hourly_rows = upsert_hourly_history(
+            clean_df
+        )
 
         print(
             f"{coin_id}: "
-            f"{raw_count} raw rows upserted, "
-            f"{hourly_count} hourly rows upserted."
+            f"{raw_rows} raw rows upserted, "
+            f"{hourly_rows} hourly rows upserted."
         )
 
-        return {
-            "coin_id": coin_id,
-            "success": True,
-            "raw_rows": raw_count,
-            "hourly_rows": hourly_count,
-            "error": None,
-        }
+        return True
 
     except Exception as exc:
-        print(f"{coin_id}: pipeline failed: {exc}")
+        print(
+            f"{coin_id}: FAILED - {exc}"
+        )
 
-        return {
-            "coin_id": coin_id,
-            "success": False,
-            "raw_rows": 0,
-            "hourly_rows": 0,
-            "error": str(exc),
-        }
+        return False
 
 
 def run_daily_pipeline():
     """
-    Run the daily market ingestion pipeline.
+    Main daily ingestion pipeline.
 
-    Returns a dictionary so the function can be called
-    from both the command line and an HTTP endpoint.
+    1. Fetch current market snapshots.
+    2. Save snapshots to PostgreSQL.
+    3. Fetch recent history for each coin.
+    4. Save raw history.
+    5. Clean history.
+    6. Save cleaned hourly history.
     """
-    successful_coins = []
-    failed_coins = []
-    coin_results = []
 
     print("Starting daily market pipeline...")
 
+    # =====================================================
+    # CURRENT MARKET SNAPSHOT
+    # =====================================================
+
+    snapshot_rows = process_market_snapshots()
+
+    # =====================================================
+    # HISTORICAL MARKET DATA
+    # =====================================================
+
+    successful_coins = []
+    failed_coins = []
+
     for coin_id in COINS:
-        result = process_coin(coin_id)
 
-        coin_results.append(result)
+        success = process_coin(
+            coin_id
+        )
 
-        if result["success"]:
-            successful_coins.append(coin_id)
+        if success:
+            successful_coins.append(
+                coin_id
+            )
         else:
-            failed_coins.append(coin_id)
+            failed_coins.append(
+                coin_id
+            )
 
-    print("\n========== PIPELINE SUMMARY ==========")
+    # =====================================================
+    # SUMMARY
+    # =====================================================
 
-    print(f"Successful coins: {len(successful_coins)}")
+    print(
+        "\n========== PIPELINE SUMMARY =========="
+    )
+
+    print(
+        f"Market snapshot rows: {snapshot_rows}"
+    )
+
+    print(
+        f"Successful coins: {len(successful_coins)}"
+    )
 
     if successful_coins:
         print(
-            "Successful coin list:",
-            ", ".join(successful_coins),
+            "Successful coin list: "
+            + ", ".join(successful_coins)
         )
 
-    print(f"Failed coins: {len(failed_coins)}")
+    print(
+        f"Failed coins: {len(failed_coins)}"
+    )
 
     if failed_coins:
         print(
-            "Failed coin list:",
-            ", ".join(failed_coins),
+            "Failed coin list: "
+            + ", ".join(failed_coins)
         )
-
-    result = {
-        "status": (
-            "success"
-            if not failed_coins
-            else "failed"
-        ),
-        "successful_coins": successful_coins,
-        "failed_coins": failed_coins,
-        "coin_results": coin_results,
-    }
 
     if failed_coins:
-        raise RuntimeError(
-            f"Pipeline completed with "
-            f"{len(failed_coins)} failed coin(s)."
+        print(
+            "Daily market pipeline completed with failures."
+        )
+    else:
+        print(
+            "Daily market pipeline completed successfully."
         )
 
-    print("Daily market pipeline completed successfully.")
-
-    return result
-
-
-def main():
-    run_daily_pipeline()
+    return {
+        "snapshot_rows": snapshot_rows,
+        "successful_coins": successful_coins,
+        "failed_coins": failed_coins,
+    }
 
 
 if __name__ == "__main__":
-    main()
+    run_daily_pipeline()
