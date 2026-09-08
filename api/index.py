@@ -12,7 +12,15 @@ app = FastAPI()
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
+# =========================================================
+# SERIALIZATION HELPERS
+# =========================================================
+
 def serialize_value(value):
+    """
+    Convert database values into JSON-safe values.
+    """
+
     if isinstance(value, Decimal):
         return float(value)
 
@@ -23,6 +31,10 @@ def serialize_value(value):
 
 
 def serialize_rows(rows):
+    """
+    Convert SQLAlchemy mapping rows into JSON-safe dictionaries.
+    """
+
     return [
         {
             key: serialize_value(value)
@@ -32,12 +44,16 @@ def serialize_rows(rows):
     ]
 
 
-# ---------------------------------------------------------
+# =========================================================
 # DASHBOARD UI
-# ---------------------------------------------------------
+# =========================================================
 
 @app.get("/", response_class=HTMLResponse)
 def dashboard():
+    """
+    Serve the frontend dashboard.
+    """
+
     index_file = PROJECT_ROOT / "index.html"
 
     if not index_file.exists():
@@ -46,24 +62,35 @@ def dashboard():
             detail="index.html not found.",
         )
 
-    return index_file.read_text(encoding="utf-8")
+    return index_file.read_text(
+        encoding="utf-8"
+    )
 
 
-# ---------------------------------------------------------
+# =========================================================
 # MARKET DATA API
-# ---------------------------------------------------------
+# =========================================================
 
 @app.get("/api/market-data")
 def get_market_data():
+    """
+    Return raw, cleaned and merged market data
+    for the dashboard.
+    """
 
-    # Import only when this endpoint is called.
-    # This prevents DB/config issues from crashing the whole app.
+    # Import only when endpoint is called.
+    # This prevents DB/config problems from
+    # crashing the entire FastAPI application.
     try:
         from src.database.connection import get_engine
+
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"Database initialization failed: {str(exc)}",
+            detail=(
+                "Database initialization failed: "
+                f"{str(exc)}"
+            ),
         )
 
     try:
@@ -71,9 +98,9 @@ def get_market_data():
 
         with engine.connect() as connection:
 
-            # -------------------------------------------------
-            # Latest market value for each coin
-            # -------------------------------------------------
+            # =================================================
+            # LATEST MARKET VALUE PER COIN
+            # =================================================
 
             latest_rows = connection.execute(
                 text(
@@ -96,10 +123,9 @@ def get_market_data():
                 )
             ).mappings().all()
 
-
-            # -------------------------------------------------
+            # =================================================
             # RAW COINS
-            # -------------------------------------------------
+            # =================================================
 
             raw_coins = connection.execute(
                 text(
@@ -116,10 +142,9 @@ def get_market_data():
                 )
             ).mappings().all()
 
-
-            # -------------------------------------------------
+            # =================================================
             # RAW MARKET HISTORY
-            # -------------------------------------------------
+            # =================================================
 
             raw_history = connection.execute(
                 text(
@@ -139,10 +164,9 @@ def get_market_data():
                 )
             ).mappings().all()
 
-
-            # -------------------------------------------------
+            # =================================================
             # RAW MARKET SNAPSHOTS
-            # -------------------------------------------------
+            # =================================================
 
             raw_snapshots = connection.execute(
                 text(
@@ -170,10 +194,9 @@ def get_market_data():
                 )
             ).mappings().all()
 
-
-            # -------------------------------------------------
-            # CLEAN COINS VIEW
-            # -------------------------------------------------
+            # =================================================
+            # CLEAN COINS
+            # =================================================
 
             clean_coins = connection.execute(
                 text(
@@ -189,10 +212,9 @@ def get_market_data():
                 )
             ).mappings().all()
 
-
-            # -------------------------------------------------
-            # CLEAN MARKET HISTORY
-            # -------------------------------------------------
+            # =================================================
+            # CLEAN HOURLY HISTORY
+            # =================================================
 
             clean_history = connection.execute(
                 text(
@@ -206,30 +228,48 @@ def get_market_data():
                         created_at,
                         updated_at
                     FROM market_hourly
+                    WHERE price IS NOT NULL
+                      AND market_cap IS NOT NULL
+                      AND total_volume IS NOT NULL
                     ORDER BY timestamp DESC
                     LIMIT 100;
                     """
                 )
             ).mappings().all()
 
-
-            # -------------------------------------------------
-            # CLEAN SNAPSHOT VIEW
+            # =================================================
+            # CLEAN MARKET SNAPSHOTS
             #
-            # One latest snapshot per coin/hour.
-            # -------------------------------------------------
+            # Keep one observation per coin/hour.
+            # Remove rows missing the important market fields.
+            # =================================================
 
             clean_snapshots = connection.execute(
                 text(
                     """
-                    SELECT *
+                    SELECT
+                        coin_id,
+                        timestamp,
+                        current_price,
+                        market_cap,
+                        market_cap_rank,
+                        total_volume,
+                        high_24h,
+                        low_24h,
+                        price_change_24h,
+                        price_change_percentage_24h,
+                        circulating_supply,
+                        total_supply,
+                        max_supply
                     FROM (
                         SELECT
                             coin_id,
+
                             DATE_TRUNC(
                                 'hour',
                                 timestamp
                             ) AS timestamp,
+
                             current_price,
                             market_cap,
                             market_cap_rank,
@@ -253,9 +293,11 @@ def get_market_data():
                             ) AS row_num
 
                         FROM market_snapshots
+
                     ) snapshot_rows
 
                     WHERE row_num = 1
+
                       AND current_price IS NOT NULL
                       AND market_cap IS NOT NULL
                       AND total_volume IS NOT NULL
@@ -267,14 +309,14 @@ def get_market_data():
                 )
             ).mappings().all()
 
-
-            # -------------------------------------------------
+            # =================================================
             # FINAL MERGED ANALYTICAL TABLE
             #
-            # Canonical model-ready view combining the coin
-            # dimension with cleaned hourly price, market cap
-            # and volume observations.
-            # -------------------------------------------------
+            # Coin information +
+            # cleaned hourly price +
+            # market cap +
+            # volume
+            # =================================================
 
             merged_market = connection.execute(
                 text(
@@ -293,21 +335,23 @@ def get_market_data():
                     WHERE mh.price IS NOT NULL
                       AND mh.market_cap IS NOT NULL
                       AND mh.total_volume IS NOT NULL
-                    ORDER BY mh.timestamp DESC, mh.coin_id
+                    ORDER BY
+                        mh.timestamp DESC,
+                        mh.coin_id
                     LIMIT 100;
                     """
                 )
             ).mappings().all()
 
-
-            # -------------------------------------------------
+            # =================================================
             # DATA QUALITY SUMMARY
-            # -------------------------------------------------
+            # =================================================
 
             quality = connection.execute(
                 text(
                     """
                     SELECT
+
                         (
                             SELECT COUNT(*)
                             FROM market_history_raw
@@ -315,10 +359,19 @@ def get_market_data():
                                OR market_cap IS NULL
                                OR total_volume IS NULL
                         ) AS raw_history_null_rows,
+
                         (
-                            SELECT COUNT(*) - COUNT(DISTINCT (coin_id, timestamp))
+                            SELECT
+                                COUNT(*) -
+                                COUNT(
+                                    DISTINCT (
+                                        coin_id,
+                                        timestamp
+                                    )
+                                )
                             FROM market_history_raw
                         ) AS raw_history_duplicate_rows,
+
                         (
                             SELECT COUNT(*)
                             FROM market_hourly
@@ -326,10 +379,19 @@ def get_market_data():
                                OR market_cap IS NULL
                                OR total_volume IS NULL
                         ) AS clean_history_null_rows,
+
                         (
-                            SELECT COUNT(*) - COUNT(DISTINCT (coin_id, timestamp))
+                            SELECT
+                                COUNT(*) -
+                                COUNT(
+                                    DISTINCT (
+                                        coin_id,
+                                        timestamp
+                                    )
+                                )
                             FROM market_hourly
                         ) AS clean_history_duplicate_rows,
+
                         (
                             SELECT COUNT(*)
                             FROM market_snapshots
@@ -337,19 +399,20 @@ def get_market_data():
                                OR market_cap IS NULL
                                OR total_volume IS NULL
                         ) AS raw_snapshot_null_rows;
+
                     """
                 )
             ).mappings().one()
 
-
-            # -------------------------------------------------
+            # =================================================
             # TABLE COUNTS
-            # -------------------------------------------------
+            # =================================================
 
             counts = connection.execute(
                 text(
                     """
                     SELECT
+
                         (
                             SELECT COUNT(*)
                             FROM coins
@@ -369,10 +432,14 @@ def get_market_data():
                             SELECT COUNT(*)
                             FROM market_snapshots
                         ) AS snapshots;
+
                     """
                 )
             ).mappings().one()
 
+        # =====================================================
+        # API RESPONSE
+        # =====================================================
 
         return {
             "status": "success",
@@ -390,9 +457,11 @@ def get_market_data():
                 "coins": serialize_rows(
                     raw_coins
                 ),
+
                 "market_history": serialize_rows(
                     raw_history
                 ),
+
                 "market_snapshots": serialize_rows(
                     raw_snapshots
                 ),
@@ -402,9 +471,11 @@ def get_market_data():
                 "coins": serialize_rows(
                     clean_coins
                 ),
+
                 "market_history": serialize_rows(
                     clean_history
                 ),
+
                 "market_snapshots": serialize_rows(
                     clean_snapshots
                 ),
@@ -426,25 +497,38 @@ def get_market_data():
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"Market data query failed: {str(exc)}",
+            detail=(
+                "Market data query failed: "
+                f"{str(exc)}"
+            ),
         )
 
 
-# ---------------------------------------------------------
-# DAILY INGESTION
-# ---------------------------------------------------------
+# =========================================================
+# DAILY INGESTION ENDPOINT
+# =========================================================
 
 @app.get("/api/daily-ingestion")
 def daily_ingestion(
-    authorization: str | None = Header(default=None)
+    authorization: str | None = Header(
+        default=None
+    )
 ):
+    """
+    Endpoint called by Vercel Cron
+    to run the daily ingestion pipeline.
+    """
 
-    cron_secret = os.getenv("CRON_SECRET")
+    cron_secret = os.getenv(
+        "CRON_SECRET"
+    )
 
     if not cron_secret:
         raise HTTPException(
             status_code=500,
-            detail="CRON_SECRET is not configured.",
+            detail=(
+                "CRON_SECRET is not configured."
+            ),
         )
 
     if authorization != f"Bearer {cron_secret}":
@@ -453,16 +537,19 @@ def daily_ingestion(
             detail="Unauthorized.",
         )
 
-    # Import ingestion pipeline only when cron calls this route.
+    # Import ingestion only when cron calls this route.
     try:
         from src.pipelines.daily_market_pipeline import (
-            run_daily_pipeline
+            run_daily_pipeline,
         )
 
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"Ingestion initialization failed: {str(exc)}",
+            detail=(
+                "Ingestion initialization failed: "
+                f"{str(exc)}"
+            ),
         )
 
     try:
@@ -471,5 +558,8 @@ def daily_ingestion(
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"Daily ingestion failed: {str(exc)}",
+            detail=(
+                "Daily ingestion failed: "
+                f"{str(exc)}"
+            ),
         )
