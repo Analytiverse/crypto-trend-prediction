@@ -256,6 +256,9 @@ def get_market_data():
                     ) snapshot_rows
 
                     WHERE row_num = 1
+                      AND current_price IS NOT NULL
+                      AND market_cap IS NOT NULL
+                      AND total_volume IS NOT NULL
 
                     ORDER BY timestamp DESC
 
@@ -263,6 +266,80 @@ def get_market_data():
                     """
                 )
             ).mappings().all()
+
+
+            # -------------------------------------------------
+            # FINAL MERGED ANALYTICAL TABLE
+            #
+            # Canonical model-ready view combining the coin
+            # dimension with cleaned hourly price, market cap
+            # and volume observations.
+            # -------------------------------------------------
+
+            merged_market = connection.execute(
+                text(
+                    """
+                    SELECT
+                        mh.coin_id,
+                        UPPER(c.symbol) AS symbol,
+                        c.name,
+                        mh.timestamp,
+                        mh.price,
+                        mh.market_cap,
+                        mh.total_volume
+                    FROM market_hourly mh
+                    JOIN coins c
+                        ON c.coin_id = mh.coin_id
+                    WHERE mh.price IS NOT NULL
+                      AND mh.market_cap IS NOT NULL
+                      AND mh.total_volume IS NOT NULL
+                    ORDER BY mh.timestamp DESC, mh.coin_id
+                    LIMIT 100;
+                    """
+                )
+            ).mappings().all()
+
+
+            # -------------------------------------------------
+            # DATA QUALITY SUMMARY
+            # -------------------------------------------------
+
+            quality = connection.execute(
+                text(
+                    """
+                    SELECT
+                        (
+                            SELECT COUNT(*)
+                            FROM market_history_raw
+                            WHERE price IS NULL
+                               OR market_cap IS NULL
+                               OR total_volume IS NULL
+                        ) AS raw_history_null_rows,
+                        (
+                            SELECT COUNT(*) - COUNT(DISTINCT (coin_id, timestamp))
+                            FROM market_history_raw
+                        ) AS raw_history_duplicate_rows,
+                        (
+                            SELECT COUNT(*)
+                            FROM market_hourly
+                            WHERE price IS NULL
+                               OR market_cap IS NULL
+                               OR total_volume IS NULL
+                        ) AS clean_history_null_rows,
+                        (
+                            SELECT COUNT(*) - COUNT(DISTINCT (coin_id, timestamp))
+                            FROM market_hourly
+                        ) AS clean_history_duplicate_rows,
+                        (
+                            SELECT COUNT(*)
+                            FROM market_snapshots
+                            WHERE current_price IS NULL
+                               OR market_cap IS NULL
+                               OR total_volume IS NULL
+                        ) AS raw_snapshot_null_rows;
+                    """
+                )
+            ).mappings().one()
 
 
             # -------------------------------------------------
@@ -331,6 +408,15 @@ def get_market_data():
                 "market_snapshots": serialize_rows(
                     clean_snapshots
                 ),
+            },
+
+            "merged": serialize_rows(
+                merged_market
+            ),
+
+            "quality": {
+                key: serialize_value(value)
+                for key, value in quality.items()
             },
         }
 
