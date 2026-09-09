@@ -3,7 +3,7 @@ import os
 import pandas as pd
 
 from src.api.coingecko_client import CoinGeckoClient
-from config import (
+from src.config import (
     COINS,
     RAW_HISTORY_FILE,
     VS_CURRENCY,
@@ -17,6 +17,15 @@ def fetch_coin_history(
     coin_id,
     days=90,
 ):
+    """
+    Fetch recent historical market data.
+
+    Example:
+        days=2 -> fetch approximately the previous 48 hours.
+
+    This function is used by the normal daily ingestion pipeline.
+    """
+
     params = {
         "vs_currency": VS_CURRENCY,
         "days": days,
@@ -29,10 +38,61 @@ def fetch_coin_history(
     )
 
 
+def fetch_coin_history_range(
+    coin_id,
+    start_timestamp,
+    end_timestamp,
+):
+    """
+    Fetch historical market data for a specific time range.
+
+    This is used to repair gaps that are older than the normal
+    48-hour ingestion window.
+
+    Parameters
+    ----------
+    coin_id:
+        CoinGecko coin ID, for example "bitcoin".
+
+    start_timestamp:
+        Beginning of the missing period.
+
+    end_timestamp:
+        End of the missing period.
+    """
+
+    start_timestamp = pd.Timestamp(start_timestamp)
+    end_timestamp = pd.Timestamp(end_timestamp)
+
+    # CoinGecko's range endpoint expects Unix timestamps in seconds.
+    start_unix = int(
+        start_timestamp.timestamp()
+    )
+
+    end_unix = int(
+        end_timestamp.timestamp()
+    )
+
+    params = {
+        "vs_currency": VS_CURRENCY,
+        "from": start_unix,
+        "to": end_unix,
+    }
+
+    return client.get(
+        endpoint=f"/coins/{coin_id}/market_chart/range",
+        params=params,
+    )
+
+
 def transform_history(
     coin_id,
     data,
 ):
+    """
+    Transform CoinGecko market-chart response into a DataFrame.
+    """
+
     required_keys = [
         "prices",
         "market_caps",
@@ -104,6 +164,14 @@ def transform_history(
 def save_without_duplicates(
     new_df,
 ):
+    """
+    Save historical data to CSV without duplicate observations.
+
+    CSV storage is retained for the standalone historical
+    ingestion utility, although PostgreSQL is the main source
+    used by the daily pipeline.
+    """
+
     if os.path.exists(RAW_HISTORY_FILE):
         existing_df = pd.read_csv(
             RAW_HISTORY_FILE
@@ -156,6 +224,10 @@ def save_without_duplicates(
 def process_coin(
     coin_id,
 ):
+    """
+    Fetch historical data for one coin.
+    """
+
     print(
         f"\nFetching historical data "
         f"for {coin_id}..."
