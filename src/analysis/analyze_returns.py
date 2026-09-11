@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from sqlalchemy import text
-
+from src.modeling.build_temporal_dataset import build_temporal_datasets
 from src.database.connection import engine
 
 
@@ -1378,5 +1378,18 @@ def main():
     analyze_market_cap_feature_redundancy(df)
     feature_columns = validate_final_features(df)
     validate_feature_leakage(feature_columns)
+
+    # -----------------------------------------------------
+    # Stage 9 - Temporal modeling dataset
+    # -----------------------------------------------------
+
+    temporal_datasets = build_temporal_datasets(
+        df,
+        feature_columns,
+    )
+
+    return temporal_datasets
+
+
 if __name__ == "__main__":
     main()
