@@ -564,3 +564,95 @@ def daily_ingestion(
                 f"{str(exc)}"
             ),
         )
+
+
+# =========================================================
+# MODEL PREDICTION ENDPOINT
+# =========================================================
+
+@app.get("/api/predict")
+def get_prediction(
+    asset: str,
+    horizon: int,
+):
+    """
+    Generate an AlphaPulse trend prediction for one asset.
+
+    Supported assets:
+    BTC, ETH, SOL, XRP, ADA
+
+    Supported horizons:
+    6, 12, 24 hours
+    """
+
+    supported_assets = {
+        "BTC",
+        "ETH",
+        "SOL",
+        "XRP",
+        "ADA",
+    }
+
+    supported_horizons = {
+        6,
+        12,
+        24,
+    }
+
+    asset = asset.strip().upper()
+
+    if asset not in supported_assets:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Unsupported asset '{asset}'. "
+                "Supported assets: BTC, ETH, SOL, XRP, ADA."
+            ),
+        )
+
+    if horizon not in supported_horizons:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Unsupported horizon '{horizon}'. "
+                "Supported horizons: 6, 12, 24 hours."
+            ),
+        )
+
+    try:
+        from src.prediction.predictor import predict_trend
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Prediction engine initialization failed: "
+                f"{str(exc)}"
+            ),
+        )
+
+    try:
+        prediction = predict_trend(
+            asset,
+            horizon,
+        )
+
+        return {
+            "status": "success",
+            "prediction": prediction,
+        }
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        )
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Prediction failed: "
+                f"{str(exc)}"
+            ),
+        )       
