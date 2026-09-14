@@ -25,3 +25,5 @@ typing_extensions==4.16.0
 tzdata==2026.3
 urllib3==2.7.0
 uvicorn==0.52.4
+joblib==1.6.0
+scikit-learn==1.9.1

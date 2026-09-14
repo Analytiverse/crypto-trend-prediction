@@ -430,11 +430,11 @@ The main objective of the modeling phase is to determine whether the engineered 
 [✓] Horizon-specific temporal purge 
 [✓] Majority baseline 
 [✓] Logistic Regression
- [✓] Random Forest 
- [✓] XGBoost 
- [✓] Model comparison 
- [✓] Final model selection 
- [✓] Final Test evaluation
+[✓] Random Forest 
+[✓] XGBoost 
+[✓] Model comparison 
+[✓] Final model selection 
+[✓] Final Test evaluation
 
 
 ```

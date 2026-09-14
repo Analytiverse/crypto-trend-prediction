@@ -1,0 +1,37 @@
+{
+    "project": "AlphaPulse",
+    "model_version": "1.0",
+    "model_name": "Balanced Logistic Regression",
+    "horizon_hours": 6,
+    "threshold": 0.005,
+    "features": [
+        "return_1h",
+        "return_6h",
+        "return_12h",
+        "return_24h",
+        "volatility_24h",
+        "volatility_72h",
+        "log_volume_change_1h",
+        "log_volume_change_6h",
+        "log_volume_change_12h",
+        "log_volume_change_24h",
+        "other_coins_return_1h"
+    ],
+    "classes": [
+        "DOWN",
+        "STABLE",
+        "UP"
+    ],
+    "training_rows": 11910,
+    "training_start": "2026-06-06T15:00:00+00:00",
+    "training_end": "2026-09-13T20:00:00+00:00",
+    "coins": [
+        "bitcoin",
+        "cardano",
+        "ethereum",
+        "ripple",
+        "solana"
+    ],
+    "created_at": "2026-09-14T10:11:57.875146+00:00",
+    "notes": "Production refit of the already-selected Balanced Logistic Regression architecture. The previous held-out test evaluation remains the final historical model-selection evaluation."
+}
