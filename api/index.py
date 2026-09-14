@@ -576,7 +576,7 @@ def get_prediction(
     horizon: int,
 ):
     """
-    Generate an AlphaPulse trend prediction for one asset.
+    Generate and persist an AlphaPulse trend prediction.
 
     Supported assets:
     BTC, ETH, SOL, XRP, ADA
@@ -621,6 +621,7 @@ def get_prediction(
 
     try:
         from src.prediction.predictor import predict_trend
+        from src.database.prediction_repository import save_prediction
 
     except Exception as exc:
         raise HTTPException(
@@ -637,8 +638,13 @@ def get_prediction(
             horizon,
         )
 
+        prediction_id = save_prediction(
+            prediction
+        )
+
         return {
             "status": "success",
+            "prediction_id": prediction_id,
             "prediction": prediction,
         }
 
@@ -655,4 +661,4 @@ def get_prediction(
                 "Prediction failed: "
                 f"{str(exc)}"
             ),
-        )       
+        )
