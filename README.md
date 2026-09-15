@@ -437,4 +437,7 @@ The main objective of the modeling phase is to determine whether the engineered 
 [✓] Final Test evaluation
 
 quick start also done(database backfill, gap repair, or historical ingestion in this quick-start menu yet, because those aren't things you should accidentally rerun every time you want to train/evaluate the model. This quick start should focus on the normal analysis/modeling workflow.)
+
+.\quick_start.ps1
+
 ```

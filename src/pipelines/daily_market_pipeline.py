@@ -1,3 +1,23 @@
+"""
+AlphaPulse Daily Market Pipeline
+
+Daily production workflow:
+
+1. Fetch current CoinGecko market snapshots.
+2. Store snapshots in PostgreSQL.
+3. Fetch recent historical data for every supported coin.
+4. Store raw history.
+5. Clean and normalize hourly history.
+6. Store cleaned hourly history.
+7. Detect and repair recent gaps.
+8. Generate production predictions.
+9. Persist latest predictions to PostgreSQL.
+
+Important:
+    This pipeline performs inference only.
+    It does NOT retrain production models.
+"""
+
 from src.config import COINS
 
 from src.database.repository import (
@@ -24,25 +44,30 @@ from src.processing.clean_history import (
     clean_history_dataframe,
 )
 
+from src.prediction.batch_predictor import (
+    run_batch_predictions,
+)
 
-# ---------------------------------------------------------
-# Configuration
-# ---------------------------------------------------------
 
-# Fetch the most recent 2 days of hourly history.
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
+# Fetch the most recent two days of hourly history.
 #
-# This provides overlap between daily runs and helps recover
-# short ingestion failures automatically.
+# The overlap allows normal daily runs to recover from
+# short ingestion interruptions.
 RECENT_HISTORY_DAYS = 2
 
 
-# After normal ingestion, check this many recent days
-# for missing hourly observations.
-#
-# This gives us a larger safety window than the normal
-# 48-hour fetch.
+# Check a wider recent window for missing hourly observations
+# after normal ingestion.
 GAP_REPAIR_LOOKBACK_DAYS = 7
 
+
+# ============================================================
+# MARKET SNAPSHOTS
+# ============================================================
 
 def process_market_snapshots():
     """
@@ -56,9 +81,12 @@ def process_market_snapshots():
 
     try:
 
-        raw_data = fetch_market_data()
+        raw_data = (
+            fetch_market_data()
+        )
 
         if not raw_data:
+
             print(
                 "No market snapshot data returned."
             )
@@ -75,6 +103,7 @@ def process_market_snapshots():
             snapshot_df is None
             or snapshot_df.empty
         ):
+
             print(
                 "Snapshot DataFrame is empty."
             )
@@ -103,12 +132,16 @@ def process_market_snapshots():
     except Exception as exc:
 
         print(
-            f"Market snapshot processing "
+            "Market snapshot processing "
             f"failed: {exc}"
         )
 
         return 0
 
+
+# ============================================================
+# SINGLE COIN INGESTION
+# ============================================================
 
 def process_coin(
     coin_id,
@@ -124,9 +157,9 @@ def process_coin(
 
     try:
 
-        # -----------------------------------------
+        # ----------------------------------------------------
         # 1. Fetch recent CoinGecko history
-        # -----------------------------------------
+        # ----------------------------------------------------
 
         raw_response = (
             fetch_coin_history(
@@ -136,32 +169,36 @@ def process_coin(
         )
 
         if not raw_response:
+
             raise RuntimeError(
-                f"No API response returned "
+                "No API response returned "
                 f"for {coin_id}"
             )
 
-        # -----------------------------------------
+        # ----------------------------------------------------
         # 2. Transform API response
-        # -----------------------------------------
+        # ----------------------------------------------------
 
-        raw_df = transform_history(
-            coin_id,
-            raw_response,
+        raw_df = (
+            transform_history(
+                coin_id,
+                raw_response,
+            )
         )
 
         if (
             raw_df is None
             or raw_df.empty
         ):
+
             raise RuntimeError(
-                f"No historical data "
+                "No historical data "
                 f"returned for {coin_id}"
             )
 
-        # -----------------------------------------
+        # ----------------------------------------------------
         # 3. Store raw history
-        # -----------------------------------------
+        # ----------------------------------------------------
 
         raw_rows = (
             upsert_raw_history(
@@ -169,9 +206,9 @@ def process_coin(
             )
         )
 
-        # -----------------------------------------
+        # ----------------------------------------------------
         # 4. Clean / normalize history
-        # -----------------------------------------
+        # ----------------------------------------------------
 
         clean_df = (
             clean_history_dataframe(
@@ -183,14 +220,15 @@ def process_coin(
             clean_df is None
             or clean_df.empty
         ):
+
             raise RuntimeError(
-                f"No cleaned data "
+                "No cleaned data "
                 f"produced for {coin_id}"
             )
 
-        # -----------------------------------------
-        # 5. Store clean hourly history
-        # -----------------------------------------
+        # ----------------------------------------------------
+        # 5. Store cleaned hourly history
+        # ----------------------------------------------------
 
         hourly_rows = (
             upsert_hourly_history(
@@ -215,36 +253,170 @@ def process_coin(
         return False
 
 
+# ============================================================
+# PRODUCTION PREDICTIONS
+# ============================================================
+
+def run_daily_predictions():
+    """
+    Generate and persist production predictions.
+
+    Uses the already-trained production models.
+
+    No model retraining occurs here.
+    """
+
+    print()
+    print(
+        "Starting daily production predictions..."
+    )
+
+    try:
+
+        prediction_summary = (
+            run_batch_predictions(
+                persist=True,
+            )
+        )
+
+        successful = (
+            prediction_summary.get(
+                "successful_predictions",
+                0,
+            )
+        )
+
+        failed = (
+            prediction_summary.get(
+                "failed_predictions",
+                0,
+            )
+        )
+
+        stored = (
+            prediction_summary.get(
+                "stored_predictions",
+                0,
+            )
+        )
+
+        timestamp = (
+            prediction_summary.get(
+                "prediction_timestamp"
+            )
+        )
+
+        timestamp_consistent = (
+            prediction_summary.get(
+                "timestamp_consistent",
+                False,
+            )
+        )
+
+        print()
+        print(
+            "Daily prediction summary:"
+        )
+
+        print(
+            f"Successful predictions: "
+            f"{successful}"
+        )
+
+        print(
+            f"Failed predictions: "
+            f"{failed}"
+        )
+
+        print(
+            f"Stored predictions: "
+            f"{stored}"
+        )
+
+        print(
+            f"Prediction timestamp: "
+            f"{timestamp}"
+        )
+
+        print(
+            "Timestamp consistent: "
+            f"{timestamp_consistent}"
+        )
+
+        return prediction_summary
+
+    except Exception as exc:
+
+        print(
+            "Daily prediction generation "
+            f"failed: {exc}"
+        )
+
+        return {
+            "status":
+                "FAILED",
+
+            "successful_predictions":
+                0,
+
+            "failed_predictions":
+                15,
+
+            "stored_predictions":
+                0,
+
+            "prediction_timestamp":
+                None,
+
+            "timestamp_consistent":
+                False,
+
+            "error":
+                str(exc),
+        }
+
+
+# ============================================================
+# DAILY PIPELINE
+# ============================================================
+
 def run_daily_pipeline():
     """
-    Main daily ingestion pipeline.
+    Run the complete AlphaPulse daily production pipeline.
 
     Steps:
     1. Fetch current market snapshots.
     2. Save snapshots to PostgreSQL.
-    3. Fetch the previous 48 hours for each coin.
+    3. Fetch previous 48 hours for every coin.
     4. Save raw historical data.
-    5. Clean / normalize historical data.
+    5. Clean and normalize historical data.
     6. Save cleaned hourly data.
-    7. Check recent history for hourly gaps.
-    8. Attempt to repair detected gaps.
+    7. Detect and repair recent gaps.
+    8. Generate production predictions if ingestion succeeded.
+    9. Persist successful predictions to PostgreSQL.
+
+    Production models are loaded for inference only.
+    They are NOT retrained here.
     """
 
+    print()
+    print("=" * 70)
     print(
-        "Starting daily market pipeline..."
+        "ALPHAPULSE DAILY MARKET PIPELINE"
     )
+    print("=" * 70)
 
-    # =====================================================
+    # ========================================================
     # CURRENT MARKET SNAPSHOT
-    # =====================================================
+    # ========================================================
 
     snapshot_rows = (
         process_market_snapshots()
     )
 
-    # =====================================================
+    # ========================================================
     # HISTORICAL MARKET DATA
-    # =====================================================
+    # ========================================================
 
     successful_coins = []
 
@@ -252,8 +424,10 @@ def run_daily_pipeline():
 
     for coin_id in COINS:
 
-        success = process_coin(
-            coin_id
+        success = (
+            process_coin(
+                coin_id
+            )
         )
 
         if success:
@@ -268,9 +442,9 @@ def run_daily_pipeline():
                 coin_id
             )
 
-    # =====================================================
+    # ========================================================
     # AUTOMATIC GAP CHECK / REPAIR
-    # =====================================================
+    # ========================================================
 
     print(
         "\nChecking recent hourly "
@@ -289,32 +463,73 @@ def run_daily_pipeline():
     except Exception as exc:
 
         print(
-            f"Automatic gap repair failed: "
+            "Automatic gap repair failed: "
             f"{exc}"
         )
 
         gap_repair_summary = {
-            "gaps_before": None,
-            "successful_repairs": 0,
-            "failed_repairs": 0,
-            "gaps_after": None,
+
+            "gaps_before":
+                None,
+
+            "successful_repairs":
+                0,
+
+            "failed_repairs":
+                0,
+
+            "gaps_after":
+                None,
         }
 
-    # =====================================================
-    # SUMMARY
-    # =====================================================
+    # ========================================================
+    # PRODUCTION PREDICTIONS
+    # ========================================================
 
+    prediction_summary = None
+
+    if failed_coins:
+
+        print()
+        print("=" * 70)
+        print(
+            "PREDICTIONS SKIPPED"
+        )
+        print("=" * 70)
+
+        print(
+            "One or more coins failed ingestion."
+        )
+
+        print(
+            "Fresh predictions will not be generated "
+            "from a partially updated dataset."
+        )
+
+    else:
+
+        prediction_summary = (
+            run_daily_predictions()
+        )
+
+    # ========================================================
+    # PIPELINE SUMMARY
+    # ========================================================
+
+    print()
+    print("=" * 70)
     print(
-        "\n========== PIPELINE SUMMARY =========="
+        "PIPELINE SUMMARY"
     )
+    print("=" * 70)
 
     print(
-        f"Market snapshot rows: "
+        "Market snapshot rows: "
         f"{snapshot_rows}"
     )
 
     print(
-        f"Successful coins: "
+        "Successful coins: "
         f"{len(successful_coins)}"
     )
 
@@ -328,7 +543,7 @@ def run_daily_pipeline():
         )
 
     print(
-        f"Failed coins: "
+        "Failed coins: "
         f"{len(failed_coins)}"
     )
 
@@ -342,16 +557,59 @@ def run_daily_pipeline():
         )
 
     print(
-        f"Gaps detected before repair: "
+        "Gaps detected before repair: "
         f"{gap_repair_summary['gaps_before']}"
     )
 
     print(
-        f"Gaps remaining after repair: "
+        "Gaps remaining after repair: "
         f"{gap_repair_summary['gaps_after']}"
     )
 
-    if failed_coins:
+    if prediction_summary:
+
+        print(
+            "Successful predictions: "
+            f"{prediction_summary.get('successful_predictions', 0)}"
+        )
+
+        print(
+            "Failed predictions: "
+            f"{prediction_summary.get('failed_predictions', 0)}"
+        )
+
+        print(
+            "Stored predictions: "
+            f"{prediction_summary.get('stored_predictions', 0)}"
+        )
+
+        print(
+            "Prediction timestamp: "
+            f"{prediction_summary.get('prediction_timestamp')}"
+        )
+
+    else:
+
+        print(
+            "Predictions: SKIPPED"
+        )
+
+    # ========================================================
+    # FINAL STATUS
+    # ========================================================
+
+    prediction_failed = (
+        prediction_summary is not None
+        and prediction_summary.get(
+            "failed_predictions",
+            0,
+        ) > 0
+    )
+
+    if (
+        failed_coins
+        or prediction_failed
+    ):
 
         print(
             "Daily market pipeline "
@@ -365,7 +623,12 @@ def run_daily_pipeline():
             "completed successfully."
         )
 
+    # ========================================================
+    # API RESPONSE
+    # ========================================================
+
     return {
+
         "snapshot_rows":
             snapshot_rows,
 
@@ -377,8 +640,16 @@ def run_daily_pipeline():
 
         "gap_repair":
             gap_repair_summary,
+
+        "predictions":
+            prediction_summary,
     }
 
 
+# ============================================================
+# COMMAND LINE
+# ============================================================
+
 if __name__ == "__main__":
+
     run_daily_pipeline()

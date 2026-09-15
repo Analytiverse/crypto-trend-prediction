@@ -32,6 +32,6 @@
         "ripple",
         "solana"
     ],
-    "created_at": "2026-09-14T10:11:58.075260+00:00",
+    "created_at": "2026-09-14T16:01:26.410827+00:00",
     "notes": "Production refit of the already-selected Balanced Logistic Regression architecture. The previous held-out test evaluation remains the final historical model-selection evaluation."
 }

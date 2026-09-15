@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
 
     <meta
@@ -9,7 +10,7 @@
         content="width=device-width, initial-scale=1.0"
     >
 
-    <title>Crypto Trend Prediction</title>
+    <title>AlphaPulse - Crypto Trend Prediction</title>
 
     <style>
 
@@ -110,7 +111,12 @@
             color: #6b7280;
             margin-top: 0;
             margin-bottom: 18px;
+            line-height: 1.5;
         }
+
+        /* =====================================================
+           CURRENT COINS
+        ===================================================== */
 
         .coin-grid {
             display: grid;
@@ -159,6 +165,150 @@
             margin: 7px 0;
         }
 
+        /* =====================================================
+           MODEL PREDICTIONS
+        ===================================================== */
+
+        .prediction-status {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-bottom: 18px;
+            font-size: 13px;
+            color: #4b5563;
+        }
+
+        .prediction-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(
+                    auto-fit,
+                    minmax(280px, 1fr)
+                );
+            gap: 18px;
+        }
+
+        .prediction-coin-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .prediction-coin-header {
+            padding: 16px 18px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .prediction-symbol {
+            font-size: 19px;
+            font-weight: bold;
+        }
+
+        .prediction-price {
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        .horizon-container {
+            padding: 12px;
+        }
+
+        .horizon-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 9px;
+            padding: 14px;
+            margin-bottom: 10px;
+        }
+
+        .horizon-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .horizon-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .horizon-title {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .trend {
+            padding: 5px 9px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .trend-up {
+            background: #ecfdf5;
+            color: #047857;
+        }
+
+        .trend-down {
+            background: #fef2f2;
+            color: #b91c1c;
+        }
+
+        .trend-stable {
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .prediction-confidence {
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        .probability-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 7px;
+        }
+
+        .probability-box {
+            background: #f9fafb;
+            border-radius: 7px;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .probability-label {
+            font-size: 10px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+
+        .probability-value {
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .prediction-meta {
+            margin-top: 10px;
+            color: #6b7280;
+            font-size: 11px;
+            line-height: 1.6;
+        }
+
+        .confidence-warning {
+            color: #92400e;
+            font-size: 11px;
+            margin-top: 8px;
+        }
+
+        /* =====================================================
+           PIPELINE
+        ===================================================== */
+
         .pipeline {
             display: grid;
             grid-template-columns:
@@ -191,7 +341,12 @@
             color: #6b7280;
             font-size: 12px;
             margin-top: 6px;
+            line-height: 1.5;
         }
+
+        /* =====================================================
+           TABS / TABLES
+        ===================================================== */
 
         .tabs {
             display: flex;
@@ -296,6 +451,10 @@
             background: #f9fafb;
         }
 
+        /* =====================================================
+           QUALITY
+        ===================================================== */
+
         .quality-grid {
             display: grid;
             grid-template-columns:
@@ -349,6 +508,10 @@
             color: #6d28d9;
         }
 
+        .model-label {
+            color: #2563eb;
+        }
+
         .api-error {
             margin-top: 10px;
             padding: 12px;
@@ -357,6 +520,22 @@
             color: #991b1b;
             font-size: 13px;
             word-break: break-word;
+        }
+
+        @media (max-width: 700px) {
+
+            header {
+                padding: 22px 18px;
+            }
+
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
         }
 
     </style>
@@ -372,11 +551,11 @@
     <div class="header-inner">
 
         <h1>
-            Crypto Trend Prediction
+            AlphaPulse - Crypto Trend Prediction
         </h1>
 
         <p>
-            CoinGecko Market Data → Cleaning → PostgreSQL → Model-Ready Dataset
+            CoinGecko → PostgreSQL → Feature Engineering → ML Models → 6h / 12h / 24h Predictions
         </p>
 
     </div>
@@ -387,7 +566,9 @@
 <main class="container">
 
 
-    <!-- DATABASE STATUS -->
+    <!-- =====================================================
+         DATABASE STATUS
+    ====================================================== -->
 
     <div
         class="status"
@@ -397,7 +578,9 @@
     </div>
 
 
-    <!-- COUNTS -->
+    <!-- =====================================================
+         COUNTS
+    ====================================================== -->
 
     <div class="stats">
 
@@ -464,11 +647,29 @@
 
         </div>
 
+
+        <div class="stat-card">
+
+            <div class="stat-label">
+                Latest Model Predictions
+            </div>
+
+            <div
+                class="stat-value"
+                id="predictionCount"
+            >
+                -
+            </div>
+
+        </div>
+
     </div>
 
 
 
-    <!-- LATEST COINS -->
+    <!-- =====================================================
+         CURRENT MARKET
+    ====================================================== -->
 
     <section class="section">
 
@@ -500,17 +701,62 @@
 
 
 
-    <!-- PIPELINE -->
+    <!-- =====================================================
+         MODEL PREDICTIONS
+    ====================================================== -->
 
     <section class="section">
 
         <h2>
-            Data Pipeline
+            Model Predictions
         </h2>
 
         <p class="section-description">
-            This shows how the original CoinGecko data becomes
-            the final dataset used for analysis and modeling.
+            Latest stored trend prediction for each cryptocurrency
+            across the 6-hour, 12-hour and 24-hour horizons.
+            Probabilities are shown because the winning class alone
+            does not represent model uncertainty.
+        </p>
+
+        <div
+            class="prediction-status"
+            id="predictionStatus"
+        >
+            Loading stored predictions...
+        </div>
+
+        <div
+            class="prediction-grid"
+            id="predictionCards"
+        >
+
+            <div class="prediction-coin-card">
+
+                <div class="loading">
+                    Waiting for prediction API...
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         PIPELINE
+    ====================================================== -->
+
+    <section class="section">
+
+        <h2>
+            End-to-End Pipeline
+        </h2>
+
+        <p class="section-description">
+            AlphaPulse converts CoinGecko market data into validated
+            time-series features and production model predictions.
         </p>
 
 
@@ -524,11 +770,12 @@
                 </div>
 
                 <div class="pipeline-title">
-                    Coins
+                    CoinGecko
                 </div>
 
                 <div class="pipeline-text">
                     Bitcoin, Ethereum, Solana, XRP and Cardano
+                    market data.
                 </div>
 
             </div>
@@ -545,7 +792,8 @@
                 </div>
 
                 <div class="pipeline-text">
-                    CoinGecko market snapshot API response
+                    Historical market prices, market caps,
+                    trading volumes and snapshots.
                 </div>
 
             </div>
@@ -557,12 +805,13 @@
                     STEP 3
                 </div>
 
-                <div class="pipeline-title raw-label">
-                    Raw History
+                <div class="pipeline-title clean-label">
+                    Cleaning
                 </div>
 
                 <div class="pipeline-text">
-                    Historical price, market cap and volume
+                    Null handling, duplicate checks,
+                    validation and hourly normalization.
                 </div>
 
             </div>
@@ -575,11 +824,12 @@
                 </div>
 
                 <div class="pipeline-title clean-label">
-                    Cleaning
+                    Feature Engineering
                 </div>
 
                 <div class="pipeline-text">
-                    Null removal, duplicate handling and hourly normalization
+                    Returns, rolling volatility, volume changes
+                    and cross-coin market context.
                 </div>
 
             </div>
@@ -591,12 +841,13 @@
                     STEP 5
                 </div>
 
-                <div class="pipeline-title clean-label">
-                    Clean History
+                <div class="pipeline-title model-label">
+                    ML Models
                 </div>
 
                 <div class="pipeline-text">
-                    Validated hourly cryptocurrency observations
+                    Balanced Logistic Regression models trained
+                    independently for 6h, 12h and 24h horizons.
                 </div>
 
             </div>
@@ -609,11 +860,12 @@
                 </div>
 
                 <div class="pipeline-title merge-label">
-                    Merged Dataset
+                    Predictions
                 </div>
 
                 <div class="pipeline-text">
-                    Coin + timestamp + price + market cap + volume
+                    UP, DOWN or STABLE signals with class
+                    probabilities stored in PostgreSQL.
                 </div>
 
             </div>
@@ -625,7 +877,9 @@
 
 
 
-    <!-- QUALITY -->
+    <!-- =====================================================
+         CLEANING SUMMARY
+    ====================================================== -->
 
     <section class="section">
 
@@ -635,7 +889,7 @@
 
         <p class="section-description">
             Data quality checks applied before using the dataset
-            for EDA and machine learning.
+            for EDA, feature engineering and machine learning.
         </p>
 
 
@@ -712,7 +966,9 @@
 
 
 
-    <!-- DATABASE TABLES -->
+    <!-- =====================================================
+         DATABASE EXPLORER
+    ====================================================== -->
 
     <section class="section">
 
@@ -721,8 +977,8 @@
         </h2>
 
         <p class="section-description">
-            Compare the original market data with cleaned data
-            and the final merged table.
+            Compare original market data, cleaned hourly data
+            and the final merged model-ready dataset.
         </p>
 
 
@@ -801,7 +1057,9 @@
 
 <div class="footer">
 
-    Crypto Trend Prediction Pipeline
+    AlphaPulse Crypto Trend Prediction System
+    <br><br>
+    Model-generated analytical signals are not financial advice.
 
 </div>
 
@@ -815,6 +1073,8 @@
 ===================================================== */
 
 let dashboardData = null;
+
+let predictionData = null;
 
 
 
@@ -854,7 +1114,8 @@ function number(value) {
 
     }
 
-    const numericValue = Number(value);
+    const numericValue =
+        Number(value);
 
     if (Number.isNaN(numericValue)) {
 
@@ -881,7 +1142,8 @@ function money(value) {
 
     }
 
-    const numericValue = Number(value);
+    const numericValue =
+        Number(value);
 
     if (Number.isNaN(numericValue)) {
 
@@ -894,7 +1156,7 @@ function money(value) {
         {
             style: "currency",
             currency: "USD",
-            maximumFractionDigits: 4
+            maximumFractionDigits: 6
         }
     ).format(numericValue);
 
@@ -913,7 +1175,8 @@ function compact(value) {
 
     }
 
-    const numericValue = Number(value);
+    const numericValue =
+        Number(value);
 
     if (Number.isNaN(numericValue)) {
 
@@ -932,6 +1195,32 @@ function compact(value) {
 }
 
 
+function percent(value) {
+
+    if (
+        value === null ||
+        value === undefined ||
+        value === ""
+    ) {
+
+        return "-";
+
+    }
+
+    const numericValue =
+        Number(value);
+
+    if (Number.isNaN(numericValue)) {
+
+        return "-";
+
+    }
+
+    return `${(numericValue * 100).toFixed(2)}%`;
+
+}
+
+
 function dateValue(value) {
 
     if (!value) {
@@ -940,9 +1229,14 @@ function dateValue(value) {
 
     }
 
-    const d = new Date(value);
+    const d =
+        new Date(value);
 
-    if (Number.isNaN(d.getTime())) {
+    if (
+        Number.isNaN(
+            d.getTime()
+        )
+    ) {
 
         return value;
 
@@ -1038,7 +1332,7 @@ function formatCell(column, value) {
 
 
 /* =====================================================
-   LATEST COIN CARDS
+   CURRENT COIN CARDS
 ===================================================== */
 
 function renderCoins(rows) {
@@ -1076,35 +1370,89 @@ function renderCoins(rows) {
     }
 
 
-    container.innerHTML = rows.map(
-        coin => `
+    container.innerHTML =
+        rows.map(
 
-            <div class="coin-card">
+            coin => `
 
-                <div class="coin-header">
+                <div class="coin-card">
 
-                    <div class="coin-name">
+                    <div class="coin-header">
+
+                        <div class="coin-name">
+
+                            ${
+                                escapeHtml(
+                                    coin.name ||
+                                    coin.coin_id ||
+                                    "Unknown"
+                                )
+                            }
+
+                        </div>
+
+
+                        <div class="coin-symbol">
+
+                            ${
+                                escapeHtml(
+                                    coin.symbol
+                                        ? String(
+                                            coin.symbol
+                                        ).toUpperCase()
+                                        : "-"
+                                )
+                            }
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="coin-price">
 
                         ${
-                            escapeHtml(
-                                coin.name ||
-                                coin.coin_id ||
-                                "Unknown"
+                            money(
+                                coin.price ??
+                                coin.current_price
                             )
                         }
 
                     </div>
 
 
-                    <div class="coin-symbol">
+                    <div class="metric">
 
+                        Market Cap:
+                        ${
+                            compact(
+                                coin.market_cap
+                            )
+                        }
+
+                    </div>
+
+
+                    <div class="metric">
+
+                        Volume:
+                        ${
+                            compact(
+                                coin.total_volume
+                            )
+                        }
+
+                    </div>
+
+
+                    <div class="metric">
+
+                        Timestamp:
                         ${
                             escapeHtml(
-                                coin.symbol
-                                    ? String(
-                                        coin.symbol
-                                    ).toUpperCase()
-                                    : "-"
+                                dateValue(
+                                    coin.timestamp
+                                )
                             )
                         }
 
@@ -1112,61 +1460,494 @@ function renderCoins(rows) {
 
                 </div>
 
+            `
 
-                <div class="coin-price">
+        ).join("");
 
-                    ${
-                        money(
-                            coin.price ??
-                            coin.current_price
-                        )
-                    }
-
-                </div>
+}
 
 
-                <div class="metric">
 
-                    Market Cap:
-                    ${
-                        compact(
-                            coin.market_cap
-                        )
-                    }
+/* =====================================================
+   MODEL PREDICTION CARDS
+===================================================== */
 
-                </div>
+function trendClass(trend) {
 
-
-                <div class="metric">
-
-                    Volume:
-                    ${
-                        compact(
-                            coin.total_volume
-                        )
-                    }
-
-                </div>
+    const normalized =
+        String(
+            trend || ""
+        ).toUpperCase();
 
 
-                <div class="metric">
+    if (normalized === "UP") {
 
-                    Timestamp:
-                    ${
-                        escapeHtml(
-                            dateValue(
-                                coin.timestamp
-                            )
-                        )
-                    }
+        return "trend-up";
 
+    }
+
+
+    if (normalized === "DOWN") {
+
+        return "trend-down";
+
+    }
+
+
+    return "trend-stable";
+
+}
+
+
+function renderPredictions(rows) {
+
+    const container =
+        element("predictionCards");
+
+
+    const status =
+        element("predictionStatus");
+
+
+    if (!container) {
+
+        return;
+
+    }
+
+
+    if (
+        !Array.isArray(rows) ||
+        rows.length === 0
+    ) {
+
+        container.innerHTML = `
+
+            <div class="prediction-coin-card">
+
+                <div class="loading">
+                    No prediction records available.
                 </div>
 
             </div>
 
-        `
+        `;
 
-    ).join("");
+
+        if (status) {
+
+            status.innerHTML =
+                "No stored model predictions available.";
+
+        }
+
+
+        setText(
+            "predictionCount",
+            "0"
+        );
+
+
+        return;
+
+    }
+
+
+    setText(
+        "predictionCount",
+        number(rows.length)
+    );
+
+
+    const grouped = {};
+
+
+    rows.forEach(
+
+        prediction => {
+
+            const asset =
+                prediction.asset ||
+                prediction.coin_id ||
+                "UNKNOWN";
+
+
+            if (!grouped[asset]) {
+
+                grouped[asset] = [];
+
+            }
+
+
+            grouped[asset].push(
+                prediction
+            );
+
+        }
+
+    );
+
+
+    const preferredOrder = [
+        "BTC",
+        "ETH",
+        "SOL",
+        "XRP",
+        "ADA"
+    ];
+
+
+    const orderedAssets =
+        preferredOrder.filter(
+            asset => grouped[asset]
+        );
+
+
+    Object.keys(grouped).forEach(
+
+        asset => {
+
+            if (
+                !orderedAssets.includes(
+                    asset
+                )
+            ) {
+
+                orderedAssets.push(
+                    asset
+                );
+
+            }
+
+        }
+
+    );
+
+
+    const cards =
+        orderedAssets.map(
+
+            asset => {
+
+                const predictions =
+                    grouped[asset].sort(
+
+                        (a, b) =>
+                            Number(
+                                a.horizon_hours
+                            )
+                            -
+                            Number(
+                                b.horizon_hours
+                            )
+
+                    );
+
+
+                const latest =
+                    predictions[0];
+
+
+                const horizonHtml =
+                    predictions.map(
+
+                        prediction => {
+
+                            const confidence =
+                                Number(
+                                    prediction.model_confidence || 0
+                                );
+
+
+                            const probabilities =
+                                prediction.probabilities || {};
+
+
+                            const threshold =
+                                Number(
+                                    prediction.threshold || 0
+                                );
+
+
+                            const weakSignal =
+                                confidence < 0.45;
+
+
+                            return `
+
+                                <div class="horizon-card">
+
+                                    <div class="horizon-header">
+
+                                        <div class="horizon-title">
+
+                                            ${
+                                                escapeHtml(
+                                                    prediction.horizon_hours
+                                                )
+                                            } Hour Prediction
+
+                                        </div>
+
+
+                                        <div
+                                            class="
+                                                trend
+                                                ${
+                                                    trendClass(
+                                                        prediction.predicted_trend
+                                                    )
+                                                }
+                                            "
+                                        >
+
+                                            ${
+                                                escapeHtml(
+                                                    prediction.predicted_trend
+                                                )
+                                            }
+
+                                        </div>
+
+                                    </div>
+
+
+                                    <div class="prediction-confidence">
+
+                                        Confidence:
+
+                                        <strong>
+
+                                            ${
+                                                (
+                                                    confidence * 100
+                                                ).toFixed(2)
+                                            }%
+
+                                        </strong>
+
+                                    </div>
+
+
+                                    <div class="probability-grid">
+
+                                        <div class="probability-box">
+
+                                            <div class="probability-label">
+                                                DOWN
+                                            </div>
+
+                                            <div class="probability-value">
+
+                                                ${
+                                                    percent(
+                                                        probabilities.DOWN
+                                                    )
+                                                }
+
+                                            </div>
+
+                                        </div>
+
+
+                                        <div class="probability-box">
+
+                                            <div class="probability-label">
+                                                STABLE
+                                            </div>
+
+                                            <div class="probability-value">
+
+                                                ${
+                                                    percent(
+                                                        probabilities.STABLE
+                                                    )
+                                                }
+
+                                            </div>
+
+                                        </div>
+
+
+                                        <div class="probability-box">
+
+                                            <div class="probability-label">
+                                                UP
+                                            </div>
+
+                                            <div class="probability-value">
+
+                                                ${
+                                                    percent(
+                                                        probabilities.UP
+                                                    )
+                                                }
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+
+                                    <div class="prediction-meta">
+
+                                        Threshold:
+                                        ±${
+                                            (
+                                                threshold * 100
+                                            ).toFixed(2)
+                                        }%
+
+                                        <br>
+
+                                        Model:
+                                        ${
+                                            escapeHtml(
+                                                prediction.model
+                                            )
+                                        }
+
+                                        <br>
+
+                                        Version:
+                                        ${
+                                            escapeHtml(
+                                                prediction.model_version
+                                            )
+                                        }
+
+                                    </div>
+
+
+                                    ${
+                                        weakSignal
+                                            ? `
+
+                                                <div class="confidence-warning">
+
+                                                    Low-confidence signal:
+                                                    review class probabilities,
+                                                    not only the winning label.
+
+                                                </div>
+
+                                            `
+                                            : ""
+                                    }
+
+                                </div>
+
+                            `;
+
+                        }
+
+                    ).join("");
+
+
+                return `
+
+                    <div class="prediction-coin-card">
+
+                        <div class="prediction-coin-header">
+
+                            <div class="prediction-symbol">
+
+                                ${
+                                    escapeHtml(
+                                        asset
+                                    )
+                                }
+
+                            </div>
+
+
+                            <div class="prediction-price">
+
+                                ${
+                                    money(
+                                        latest.current_price
+                                    )
+                                }
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="horizon-container">
+
+                            ${horizonHtml}
+
+                        </div>
+
+                    </div>
+
+                `;
+
+            }
+
+        ).join("");
+
+
+    container.innerHTML =
+        cards;
+
+
+    const timestamps =
+        rows
+
+            .map(
+                row =>
+                    new Date(
+                        row.prediction_timestamp
+                    )
+            )
+
+            .filter(
+                date =>
+                    !Number.isNaN(
+                        date.getTime()
+                    )
+            )
+
+            .sort(
+                (a, b) =>
+                    b - a
+            );
+
+
+    if (
+        status &&
+        timestamps.length > 0
+    ) {
+
+        status.innerHTML = `
+
+            <span class="success">
+                ● Prediction database connected
+            </span>
+
+            &nbsp;&nbsp;
+
+            ${rows.length} latest predictions
+
+            &nbsp;&nbsp;
+
+            Prediction data timestamp:
+
+            <strong>
+
+                ${
+                    timestamps[0]
+                        .toLocaleString()
+                }
+
+            </strong>
+
+        `;
+
+    }
 
 }
 
@@ -1192,19 +1973,26 @@ function createMergedDataset() {
 
 
     coins.forEach(
+
         coin => {
 
-            coinMap[coin.coin_id] = coin;
+            coinMap[
+                coin.coin_id
+            ] = coin;
 
         }
+
     );
 
 
     return history.map(
+
         row => {
 
             const coin =
-                coinMap[row.coin_id] || {};
+                coinMap[
+                    row.coin_id
+                ] || {};
 
 
             return {
@@ -1216,7 +2004,8 @@ function createMergedDataset() {
                     coin.symbol || "-",
 
                 name:
-                    coin.name || row.coin_id,
+                    coin.name ||
+                    row.coin_id,
 
                 timestamp:
                     row.timestamp,
@@ -1233,6 +2022,7 @@ function createMergedDataset() {
             };
 
         }
+
     );
 
 }
@@ -1245,7 +2035,9 @@ function createMergedDataset() {
 
 function countNullRows(rows) {
 
-    if (!Array.isArray(rows)) {
+    if (
+        !Array.isArray(rows)
+    ) {
 
         return 0;
 
@@ -1253,16 +2045,22 @@ function countNullRows(rows) {
 
 
     return rows.filter(
+
         row => {
 
-            return Object.values(row).some(
+            return Object.values(
+                row
+            ).some(
+
                 value =>
                     value === null ||
                     value === undefined ||
                     value === ""
+
             );
 
         }
+
     ).length;
 
 }
@@ -1270,7 +2068,9 @@ function countNullRows(rows) {
 
 function countDuplicates(rows) {
 
-    if (!Array.isArray(rows)) {
+    if (
+        !Array.isArray(rows)
+    ) {
 
         return 0;
 
@@ -1286,13 +2086,16 @@ function countDuplicates(rows) {
 
 
     rows.forEach(
+
         row => {
 
             const key =
                 `${row.coin_id || ""}|${row.timestamp || ""}`;
 
 
-            if (seen.has(key)) {
+            if (
+                seen.has(key)
+            ) {
 
                 duplicates += 1;
 
@@ -1303,6 +2106,7 @@ function countDuplicates(rows) {
             }
 
         }
+
     );
 
 
@@ -1377,7 +2181,7 @@ function tableDefinitions() {
                 "Raw Coin Market Data",
 
             subtitle:
-                "Original market snapshot records stored from the CoinGecko market endpoint.",
+                "Original market snapshot records stored from CoinGecko.",
 
             rows:
                 dashboardData?.raw?.market_snapshots || []
@@ -1405,7 +2209,7 @@ function tableDefinitions() {
                 "Cleaned Coin Market Data",
 
             subtitle:
-                "Market snapshot data after removing invalid records and selecting normalized records.",
+                "Normalized market snapshot records.",
 
             rows:
                 dashboardData?.cleaned?.market_snapshots || []
@@ -1419,7 +2223,7 @@ function tableDefinitions() {
                 "Cleaned Historical Data",
 
             subtitle:
-                "Hourly normalized data after duplicate, null and validation checks.",
+                "Validated hourly market observations.",
 
             rows:
                 dashboardData?.cleaned?.market_history || []
@@ -1433,7 +2237,7 @@ function tableDefinitions() {
                 "Final Merged Dataset",
 
             subtitle:
-                "The model-ready table containing coin information, timestamp, price, market cap and total volume.",
+                "Coin information joined with model-ready hourly market data.",
 
             rows:
                 createMergedDataset()
@@ -1470,7 +2274,9 @@ function renderTable(config) {
             <div class="table-card">
 
                 <div class="loading">
+
                     Table configuration not found.
+
                 </div>
 
             </div>
@@ -1483,12 +2289,16 @@ function renderTable(config) {
 
 
     const rows =
-        Array.isArray(config.rows)
+        Array.isArray(
+            config.rows
+        )
             ? config.rows
             : [];
 
 
-    if (rows.length === 0) {
+    if (
+        rows.length === 0
+    ) {
 
         container.innerHTML = `
 
@@ -1509,8 +2319,7 @@ function renderTable(config) {
 
                 <div class="loading">
 
-                    No rows are currently available
-                    for this dataset.
+                    No rows are currently available.
 
                 </div>
 
@@ -1524,11 +2333,14 @@ function renderTable(config) {
 
 
     const columns =
-        Object.keys(rows[0]);
+        Object.keys(
+            rows[0]
+        );
 
 
     const headerHtml =
         columns.map(
+
             column => `
 
                 <th>
@@ -1536,7 +2348,10 @@ function renderTable(config) {
                     ${
                         escapeHtml(
                             column
-                                .replaceAll("_", " ")
+                                .replaceAll(
+                                    "_",
+                                    " "
+                                )
                                 .toUpperCase()
                         )
                     }
@@ -1550,12 +2365,14 @@ function renderTable(config) {
 
     const rowsHtml =
         rows.map(
+
             row => `
 
                 <tr>
 
                     ${
                         columns.map(
+
                             column => `
 
                                 <td>
@@ -1618,7 +2435,9 @@ function renderTable(config) {
 
 
                     <tbody>
+
                         ${rowsHtml}
+
                     </tbody>
 
                 </table>
@@ -1637,7 +2456,10 @@ function renderTable(config) {
    CHANGE TABLE
 ===================================================== */
 
-function showTable(name, clickedButton) {
+function showTable(
+    name,
+    clickedButton
+) {
 
     if (!dashboardData) {
 
@@ -1649,6 +2471,7 @@ function showTable(name, clickedButton) {
     document.querySelectorAll(
         ".tab"
     ).forEach(
+
         button => {
 
             button.classList.remove(
@@ -1659,6 +2482,7 @@ function showTable(name, clickedButton) {
             );
 
         }
+
     );
 
 
@@ -1669,32 +2493,40 @@ function showTable(name, clickedButton) {
             name === "rawHistory"
         ) {
 
-            clickedButton.classList.add(
-                "raw-active"
-            );
+            clickedButton
+                .classList
+                .add(
+                    "raw-active"
+                );
 
         } else if (
             name === "cleanMarket" ||
             name === "cleanHistory"
         ) {
 
-            clickedButton.classList.add(
-                "clean-active"
-            );
+            clickedButton
+                .classList
+                .add(
+                    "clean-active"
+                );
 
         } else if (
             name === "merged"
         ) {
 
-            clickedButton.classList.add(
-                "merge-active"
-            );
+            clickedButton
+                .classList
+                .add(
+                    "merge-active"
+                );
 
         } else {
 
-            clickedButton.classList.add(
-                "active"
-            );
+            clickedButton
+                .classList
+                .add(
+                    "active"
+                );
 
         }
 
@@ -1726,10 +2558,13 @@ function setupButtons() {
 
 
     buttons.forEach(
+
         button => {
 
             button.addEventListener(
+
                 "click",
+
                 function () {
 
                     showTable(
@@ -1738,9 +2573,11 @@ function setupButtons() {
                     );
 
                 }
+
             );
 
         }
+
     );
 
 }
@@ -1748,7 +2585,170 @@ function setupButtons() {
 
 
 /* =====================================================
-   LOAD API DATA
+   LOAD MARKET DATA
+===================================================== */
+
+async function loadMarketData() {
+
+    const response =
+        await fetch(
+
+            "/api/market-data",
+
+            {
+                method: "GET",
+
+                headers: {
+                    "Accept":
+                        "application/json"
+                },
+
+                cache:
+                    "no-store"
+            }
+
+        );
+
+
+    const responseText =
+        await response.text();
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            `Market API HTTP ${response.status}: ${responseText}`
+        );
+
+    }
+
+
+    dashboardData =
+        JSON.parse(
+            responseText
+        );
+
+
+    const counts =
+        dashboardData.counts || {};
+
+
+    setText(
+        "coinCount",
+        number(
+            counts.coins || 0
+        )
+    );
+
+
+    setText(
+        "rawCount",
+        number(
+            counts.raw_history || 0
+        )
+    );
+
+
+    setText(
+        "cleanCount",
+        number(
+            counts.clean_history || 0
+        )
+    );
+
+
+    setText(
+        "snapshotCount",
+        number(
+            counts.snapshots || 0
+        )
+    );
+
+
+    renderCoins(
+        dashboardData.latest || []
+    );
+
+
+    updateQuality();
+
+
+    const firstButton =
+        document.querySelector(
+            '[data-table="coins"]'
+        );
+
+
+    showTable(
+        "coins",
+        firstButton
+    );
+
+
+    return dashboardData;
+
+}
+
+
+
+/* =====================================================
+   LOAD PREDICTIONS
+===================================================== */
+
+async function loadPredictions() {
+
+    const response =
+        await fetch(
+
+            "/api/predictions",
+
+            {
+                method: "GET",
+
+                headers: {
+                    "Accept":
+                        "application/json"
+                },
+
+                cache:
+                    "no-store"
+            }
+
+        );
+
+
+    const responseText =
+        await response.text();
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            `Prediction API HTTP ${response.status}: ${responseText}`
+        );
+
+    }
+
+
+    predictionData =
+        JSON.parse(
+            responseText
+        );
+
+
+    renderPredictions(
+        predictionData.predictions || []
+    );
+
+
+    return predictionData;
+
+}
+
+
+
+/* =====================================================
+   LOAD COMPLETE DASHBOARD
 ===================================================== */
 
 async function loadDashboard() {
@@ -1759,133 +2759,12 @@ async function loadDashboard() {
 
     try {
 
-        status.innerHTML = `
-            Connecting to PostgreSQL database...
-        `;
+        status.innerHTML =
+            "Connecting to PostgreSQL database...";
 
 
-        console.log(
-            "Fetching /api/market-data"
-        );
+        await loadMarketData();
 
-
-        const response =
-            await fetch(
-                "/api/market-data",
-                {
-                    method: "GET",
-                    headers: {
-                        "Accept":
-                            "application/json"
-                    },
-                    cache:
-                        "no-store"
-                }
-            );
-
-
-        console.log(
-            "API response status:",
-            response.status
-        );
-
-
-        const responseText =
-            await response.text();
-
-
-        console.log(
-            "API response:",
-            responseText
-        );
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                `HTTP ${response.status}: ${responseText}`
-            );
-
-        }
-
-
-        dashboardData =
-            JSON.parse(responseText);
-
-
-        console.log(
-            "Parsed dashboard data:",
-            dashboardData
-        );
-
-
-        if (
-            !dashboardData ||
-            dashboardData.status !== "success"
-        ) {
-
-            console.warn(
-                "API did not explicitly return success."
-            );
-
-        }
-
-
-
-        /* COUNTERS */
-
-        const counts =
-            dashboardData.counts || {};
-
-
-        setText(
-            "coinCount",
-            number(
-                counts.coins || 0
-            )
-        );
-
-
-        setText(
-            "rawCount",
-            number(
-                counts.raw_history || 0
-            )
-        );
-
-
-        setText(
-            "cleanCount",
-            number(
-                counts.clean_history || 0
-            )
-        );
-
-
-        setText(
-            "snapshotCount",
-            number(
-                counts.snapshots || 0
-            )
-        );
-
-
-
-        /* COINS */
-
-        renderCoins(
-            dashboardData.latest || []
-        );
-
-
-
-        /* QUALITY */
-
-        updateQuality();
-
-
-
-        /* STATUS */
 
         const latestRows =
             dashboardData.latest || [];
@@ -1928,11 +2807,16 @@ async function loadDashboard() {
 
                 &nbsp;&nbsp;
 
-                Latest observation:
-                ${
-                    timestamps[0]
-                        .toLocaleString()
-                }
+                Latest market observation:
+
+                <strong>
+
+                    ${
+                        timestamps[0]
+                            .toLocaleString()
+                    }
+
+                </strong>
 
             `;
 
@@ -1948,33 +2832,18 @@ async function loadDashboard() {
 
                 &nbsp;&nbsp;
 
-                Data loaded successfully
+                Market data loaded successfully
 
             `;
 
         }
 
 
-
-        /* DEFAULT TABLE */
-
-        const firstButton =
-            document.querySelector(
-                '[data-table="coins"]'
-            );
-
-
-        showTable(
-            "coins",
-            firstButton
-        );
-
-
     } catch (error) {
 
 
         console.error(
-            "Dashboard error:",
+            "Market dashboard error:",
             error
         );
 
@@ -1983,17 +2852,22 @@ async function loadDashboard() {
 
             <span class="error">
 
-                ● API connection failed
+                ● Market API connection failed
 
             </span>
 
+
             <div class="api-error">
 
-                ${escapeHtml(error.message)}
+                ${
+                    escapeHtml(
+                        error.message
+                    )
+                }
 
                 <br><br>
 
-                Test this URL directly:
+                Test:
 
                 <strong>
                     /api/market-data
@@ -2003,46 +2877,62 @@ async function loadDashboard() {
 
         `;
 
+    }
 
-        setText(
-            "coinCount",
-            "-"
+
+
+    /* =================================================
+       LOAD PREDICTIONS SEPARATELY
+       MARKET UI REMAINS USABLE IF THIS REQUEST FAILS
+    ================================================= */
+
+
+    try {
+
+        await loadPredictions();
+
+
+    } catch (error) {
+
+
+        console.error(
+            "Prediction dashboard error:",
+            error
         );
 
-        setText(
-            "rawCount",
-            "-"
-        );
 
         setText(
-            "cleanCount",
-            "-"
-        );
-
-        setText(
-            "snapshotCount",
+            "predictionCount",
             "-"
         );
 
 
         element(
-            "coinCards"
+            "predictionStatus"
         ).innerHTML = `
 
-            <div class="coin-card">
+            <span class="error">
 
-                <div class="coin-name">
+                ● Prediction API connection failed
 
-                    Frontend loaded successfully
+            </span>
 
-                </div>
 
-                <div class="metric">
+            <div class="api-error">
 
-                    The API request failed.
-                    Check the error shown above.
+                ${
+                    escapeHtml(
+                        error.message
+                    )
+                }
 
-                </div>
+                <br><br>
+
+                Test:
+
+                <strong>
+                    /api/predictions
+                </strong>
 
             </div>
 
@@ -2050,32 +2940,14 @@ async function loadDashboard() {
 
 
         element(
-            "tableContainer"
+            "predictionCards"
         ).innerHTML = `
 
-            <div class="table-card">
-
-                <div class="table-header">
-
-                    <h3>
-                        Frontend is working
-                    </h3>
-
-                    <p>
-                        Database/API connection needs attention.
-                    </p>
-
-                </div>
+            <div class="prediction-coin-card">
 
                 <div class="loading">
 
-                    Open:
-
-                    <strong>
-                        /api/market-data
-                    </strong>
-
-                    to inspect the backend response.
+                    Prediction data could not be loaded.
 
                 </div>
 
@@ -2094,11 +2966,13 @@ async function loadDashboard() {
 ===================================================== */
 
 document.addEventListener(
+
     "DOMContentLoaded",
+
     function () {
 
         console.log(
-            "Crypto dashboard started"
+            "AlphaPulse dashboard started"
         );
 
 
@@ -2108,6 +2982,7 @@ document.addEventListener(
         loadDashboard();
 
     }
+
 );
 
 

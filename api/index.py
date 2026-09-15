@@ -8,7 +8,6 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import HTMLResponse
 from sqlalchemy import text
 
-
 app = FastAPI()
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -511,7 +510,86 @@ def get_market_data():
             ),
         )
 
+# =========================================================
+# LATEST MODEL PREDICTIONS
+# =========================================================
 
+@app.get("/api/predictions")
+def get_predictions():
+    """
+    Return the latest prediction for every coin × horizon.
+
+    Expected:
+        5 coins × 3 horizons = 15 predictions
+    """
+
+    try:
+        from src.database.prediction_repository import (
+            get_latest_predictions,
+        )
+
+        rows = get_latest_predictions()
+
+        predictions = []
+
+        for row in rows:
+            predictions.append(
+                {
+                    "id": row["id"],
+                    "coin_id": row["coin_id"],
+                    "asset": row["asset"],
+                    "prediction_timestamp": serialize_value(
+                        row["prediction_timestamp"]
+                    ),
+                    "horizon_hours": row["horizon_hours"],
+                    "current_price": serialize_value(
+                        row["current_price"]
+                    ),
+                    "predicted_trend": row["predicted_trend"],
+                    "model_confidence": serialize_value(
+                        row["model_confidence"]
+                    ),
+                    "model_confidence_percent": round(
+                        float(row["model_confidence"]) * 100,
+                        2,
+                    ),
+                    "probabilities": {
+                        "DOWN": serialize_value(
+                            row["probability_down"]
+                        ),
+                        "STABLE": serialize_value(
+                            row["probability_stable"]
+                        ),
+                        "UP": serialize_value(
+                            row["probability_up"]
+                        ),
+                    },
+                    "model": row["model_name"],
+                    "model_version": row["model_version"],
+                    "threshold": serialize_value(
+                        row["threshold"]
+                    ),
+                    "feature_count": row["feature_count"],
+                    "generated_at": serialize_value(
+                        row["generated_at"]
+                    ),
+                    "updated_at": serialize_value(
+                        row["updated_at"]
+                    ),
+                }
+            )
+
+        return {
+            "status": "success",
+            "count": len(predictions),
+            "predictions": predictions,
+        }
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Prediction query failed: {str(exc)}",
+        )
 # =========================================================
 # DAILY INGESTION ENDPOINT
 # =========================================================
@@ -621,7 +699,7 @@ def get_prediction(
 
     try:
         from src.prediction.predictor import predict_trend
-        from src.database.prediction_repository import save_prediction
+        from src.database.prediction_repository import upsert_prediction
 
     except Exception as exc:
         raise HTTPException(
@@ -638,13 +716,12 @@ def get_prediction(
             horizon,
         )
 
-        prediction_id = save_prediction(
+        upsert_prediction(
             prediction
         )
 
         return {
             "status": "success",
-            "prediction_id": prediction_id,
             "prediction": prediction,
         }
 
