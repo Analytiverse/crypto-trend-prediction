@@ -305,6 +305,84 @@
             margin-top: 8px;
         }
 
+
+        /* =====================================================
+           AI EXPLANATION
+        ===================================================== */
+
+        .explain-button {
+            width: 100%;
+            margin-top: 12px;
+            padding: 9px 12px;
+            border: 1px solid #2563eb;
+            border-radius: 7px;
+            background: #2563eb;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .explain-button:hover {
+            background: #1d4ed8;
+            border-color: #1d4ed8;
+        }
+
+        .explain-button:disabled {
+            background: #9ca3af;
+            border-color: #9ca3af;
+            cursor: wait;
+        }
+
+        .explanation-panel {
+            display: none;
+            margin-top: 12px;
+            padding: 13px;
+            border: 1px solid #dbeafe;
+            border-radius: 8px;
+            background: #f8fbff;
+            font-size: 12px;
+            line-height: 1.65;
+            color: #374151;
+        }
+
+        .explanation-panel.visible {
+            display: block;
+        }
+
+        .explanation-title {
+            margin-bottom: 9px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #1d4ed8;
+        }
+
+        .explanation-content p {
+            margin: 7px 0;
+        }
+
+        .explanation-content ul {
+            margin: 7px 0;
+            padding-left: 20px;
+        }
+
+        .explanation-content li {
+            margin: 4px 0;
+        }
+
+        .explanation-disclaimer {
+            margin-top: 10px;
+            padding-top: 9px;
+            border-top: 1px solid #dbeafe;
+            color: #6b7280;
+            font-size: 10px;
+        }
+
+        .explanation-error {
+            color: #b91c1c;
+        }
+
+
         /* =====================================================
            PIPELINE
         ===================================================== */
@@ -1836,6 +1914,23 @@ function renderPredictions(rows) {
                                             : ""
                                     }
 
+
+                                    <button
+                                        class="explain-button"
+                                        type="button"
+                                        data-asset="${escapeHtml(asset)}"
+                                        data-horizon="${escapeHtml(prediction.horizon_hours)}"
+                                    >
+                                        Explain Prediction
+                                    </button>
+
+
+                                    <div
+                                        class="explanation-panel"
+                                        data-explanation-panel="${escapeHtml(asset)}-${escapeHtml(prediction.horizon_hours)}"
+                                    >
+                                    </div>
+
                                 </div>
 
                             `;
@@ -1951,6 +2046,350 @@ function renderPredictions(rows) {
 
 }
 
+
+
+
+/* =====================================================
+   GROQ LLM EXPLANATIONS
+===================================================== */
+
+function renderExplanationMarkdown(text) {
+
+    if (!text) {
+        return "";
+    }
+
+    const safeText =
+        escapeHtml(text);
+
+    const lines =
+        safeText.split(/\r?\n/);
+
+    let html = "";
+    let inList = false;
+
+
+    function inlineMarkdown(value) {
+
+        return value.replace(
+            /\*\*(.+?)\*\*/g,
+            "<strong>$1</strong>"
+        );
+
+    }
+
+
+    lines.forEach(
+        line => {
+
+            const trimmed =
+                line.trim();
+
+
+            if (
+                trimmed.startsWith("- ")
+            ) {
+
+                if (!inList) {
+
+                    html += "<ul>";
+                    inList = true;
+
+                }
+
+                html +=
+                    `<li>${inlineMarkdown(
+                        trimmed.slice(2)
+                    )}</li>`;
+
+                return;
+
+            }
+
+
+            if (inList) {
+
+                html += "</ul>";
+                inList = false;
+
+            }
+
+
+            if (!trimmed) {
+
+                return;
+
+            }
+
+
+            html +=
+                `<p>${inlineMarkdown(
+                    trimmed
+                )}</p>`;
+
+        }
+    );
+
+
+    if (inList) {
+
+        html += "</ul>";
+
+    }
+
+
+    return html;
+
+}
+
+
+async function explainPrediction(button) {
+
+    const asset =
+        String(
+            button.dataset.asset || ""
+        ).toUpperCase();
+
+    const horizon =
+        Number(
+            button.dataset.horizon
+        );
+
+    const card =
+        button.closest(
+            ".horizon-card"
+        );
+
+    const panel =
+        card
+            ? card.querySelector(
+                ".explanation-panel"
+            )
+            : null;
+
+
+    if (!panel) {
+
+        return;
+
+    }
+
+
+    button.disabled = true;
+    button.textContent =
+        "Generating explanation...";
+
+    panel.classList.add(
+        "visible"
+    );
+
+    panel.innerHTML = `
+
+        <div class="explanation-title">
+            AI Explanation
+        </div>
+
+        <div class="loading">
+            Asking the Groq LLM to explain this
+            ${escapeHtml(asset)}
+            ${escapeHtml(horizon)}h prediction...
+        </div>
+
+    `;
+
+
+    try {
+
+        const response =
+            await fetch(
+
+                `/api/explain?asset=${
+                    encodeURIComponent(asset)
+                }&horizon=${
+                    encodeURIComponent(horizon)
+                }`,
+
+                {
+                    method: "GET",
+
+                    headers: {
+                        "Accept":
+                            "application/json"
+                    },
+
+                    cache:
+                        "no-store"
+                }
+
+            );
+
+
+        const responseText =
+            await response.text();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                `Explanation API HTTP ${
+                    response.status
+                }: ${responseText}`
+            );
+
+        }
+
+
+        const payload =
+            JSON.parse(
+                responseText
+            );
+
+
+        if (
+            payload.status !== "success" ||
+            !payload.result
+        ) {
+
+            throw new Error(
+                "Explanation API returned an invalid response."
+            );
+
+        }
+
+
+        const result =
+            payload.result;
+
+
+        panel.innerHTML = `
+
+            <div class="explanation-title">
+
+                AI Explanation ·
+                ${escapeHtml(result.llm_provider || "Groq")}
+
+            </div>
+
+
+            <div class="explanation-content">
+
+                ${
+                    renderExplanationMarkdown(
+                        result.explanation
+                    )
+                }
+
+            </div>
+
+
+            <div class="explanation-disclaimer">
+
+                ${
+                    escapeHtml(
+                        result.disclaimer ||
+                        "Model-generated analytical signal. Not financial advice."
+                    )
+                }
+
+            </div>
+
+        `;
+
+
+        button.textContent =
+            "Refresh Explanation";
+
+
+    } catch (error) {
+
+        console.error(
+            "LLM explanation error:",
+            error
+        );
+
+
+        panel.innerHTML = `
+
+            <div class="explanation-title">
+                AI Explanation
+            </div>
+
+            <div class="explanation-error">
+
+                Could not generate the explanation.
+
+                <br><br>
+
+                ${
+                    escapeHtml(
+                        error.message
+                    )
+                }
+
+            </div>
+
+        `;
+
+
+        button.textContent =
+            "Try Again";
+
+
+    } finally {
+
+        button.disabled = false;
+
+    }
+
+}
+
+
+function setupExplanationButtons() {
+
+    const container =
+        element(
+            "predictionCards"
+        );
+
+
+    if (!container) {
+
+        return;
+
+    }
+
+
+    container.addEventListener(
+
+        "click",
+
+        function (event) {
+
+            const button =
+                event.target.closest(
+                    ".explain-button"
+                );
+
+
+            if (
+                !button ||
+                !container.contains(button)
+            ) {
+
+                return;
+
+            }
+
+
+            explainPrediction(
+                button
+            );
+
+        }
+
+    );
+
+}
 
 
 /* =====================================================
@@ -2977,6 +3416,8 @@ document.addEventListener(
 
 
         setupButtons();
+
+        setupExplanationButtons();
 
 
         loadDashboard();
