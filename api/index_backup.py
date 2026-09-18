@@ -16,10 +16,7 @@ ML prediction pipeline and the Groq explanation service.
 
 from __future__ import annotations
 
-import math
-from decimal import Decimal
 from pathlib import Path
-from typing import Any
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -83,55 +80,6 @@ SUPPORTED_HORIZONS = {
 # ============================================================
 # HELPERS
 # ============================================================
-
-def make_json_safe(value: Any) -> Any:
-    """
-    Recursively convert values that cannot be represented
-    in strict JSON.
-
-    PostgreSQL data is NOT modified.
-
-    NaN / Infinity -> None
-    Decimal NaN / Infinity -> None
-    Normal Decimal values are preserved and FastAPI
-    serializes them normally.
-    """
-
-    if isinstance(value, dict):
-        return {
-            key: make_json_safe(item)
-            for key, item in value.items()
-        }
-
-    if isinstance(value, (list, tuple)):
-        return [
-            make_json_safe(item)
-            for item in value
-        ]
-
-    if isinstance(value, Decimal):
-        if value.is_nan() or value.is_infinite():
-            return None
-        return value
-
-    if isinstance(value, float):
-        if math.isnan(value) or math.isinf(value):
-            return None
-        return value
-
-    return value
-
-
-def rows_to_dicts(result) -> list[dict]:
-    """
-    Convert SQLAlchemy rows to dictionaries.
-    """
-
-    return [
-        dict(row._mapping)
-        for row in result
-    ]
-
 
 def validate_asset(asset: str) -> str:
     """
@@ -197,73 +145,31 @@ def home():
 @app.get("/api/market-data")
 def market_data():
     """
-    Read existing AlphaPulse market data from PostgreSQL.
+    Return market information required by the dashboard.
 
-    This endpoint is READ ONLY.
-
-    It does NOT:
-    - fetch CoinGecko data
-    - clean data
-    - repair gaps
-    - insert rows
-    - update rows
-    - delete rows
-    - retrain models
-
-    Dashboard mapping:
-
-    Current Coin Market
-        -> latest market_snapshots row for each coin
-
-    Raw Market
-        -> market_snapshots
-
-    Raw History
-        -> market_history_raw
-
-    Clean Market
-        -> latest market_hourly row for each coin
-
-    Clean History
-        -> market_hourly
+    This endpoint only READS existing database data.
+    It does not insert, update, delete, or modify data.
     """
 
-    # --------------------------------------------------------
-    # CURRENT COIN MARKET
-    # Latest real market snapshot for every tracked coin.
-    # --------------------------------------------------------
-
-    latest_snapshot_query = """
-        SELECT DISTINCT ON (ms.coin_id)
-            ms.coin_id,
+    # Latest cleaned hourly record for each coin.
+    latest_query = """
+        SELECT DISTINCT ON (mh.coin_id)
+            mh.coin_id,
             c.symbol,
             c.name,
-            ms.timestamp,
-            ms.current_price,
-            ms.market_cap,
-            ms.market_cap_rank,
-            ms.total_volume,
-            ms.high_24h,
-            ms.low_24h,
-            ms.price_change_24h,
-            ms.price_change_percentage_24h,
-            ms.circulating_supply,
-            ms.total_supply,
-            ms.max_supply,
-            ms.fetched_at
-        FROM market_snapshots AS ms
+            mh.timestamp,
+            mh.price,
+            mh.market_cap,
+            mh.total_volume
+        FROM market_hourly AS mh
         INNER JOIN coins AS c
-            ON c.coin_id = ms.coin_id
+            ON c.coin_id = mh.coin_id
         ORDER BY
-            ms.coin_id,
-            ms.timestamp DESC
+            mh.coin_id,
+            mh.timestamp DESC
     """
 
-    # --------------------------------------------------------
-    # DATABASE COUNTS
-    # These are FULL table counts, not the 500-row UI limit.
-    # --------------------------------------------------------
-
+    # Actual database row counts.
     counts_query = """
         SELECT
             (SELECT COUNT(*) FROM coins)
@@ -279,10 +185,7 @@ def market_data():
                 AS snapshots
     """
 
-    # --------------------------------------------------------
-    # TRACKED COINS
-    # --------------------------------------------------------
-
+    # Coin metadata.
     coins_query = """
         SELECT
             coin_id,
@@ -294,11 +197,38 @@ def market_data():
         ORDER BY symbol
     """
 
-    # --------------------------------------------------------
-    # RAW MARKET SNAPSHOTS
-    # --------------------------------------------------------
+    # Raw historical CoinGecko records.
+    raw_history_query = """
+        SELECT
+            coin_id,
+            timestamp,
+            price,
+            market_cap,
+            total_volume
+        FROM market_history_raw
+        ORDER BY timestamp DESC
+        LIMIT 500
+    """
 
-    raw_market_query = """
+    # Cleaned hourly records.
+    clean_history_query = """
+        SELECT
+            coin_id,
+            timestamp,
+            price,
+            market_cap,
+            total_volume
+        FROM market_hourly
+        ORDER BY timestamp DESC
+        LIMIT 500
+    """
+
+    # Raw CoinGecko market snapshots.
+    #
+    # IMPORTANT:
+    # market_snapshots contains "current_price",
+    # NOT a column named "price".
+    snapshots_query = """
         SELECT
             id,
             coin_id,
@@ -316,249 +246,104 @@ def market_data():
             max_supply,
             fetched_at
         FROM market_snapshots
-        ORDER BY
-            timestamp DESC,
-            coin_id
+        ORDER BY timestamp DESC
         LIMIT 500
-    """
-
-    # --------------------------------------------------------
-    # RAW HISTORICAL DATA
-    # --------------------------------------------------------
-
-    raw_history_query = """
-        SELECT
-            id,
-            coin_id,
-            timestamp,
-            price,
-            market_cap,
-            total_volume,
-            fetched_at
-        FROM market_history_raw
-        ORDER BY
-            timestamp DESC,
-            coin_id
-        LIMIT 500
-    """
-
-    # --------------------------------------------------------
-    # CLEAN MARKET
-    # Latest cleaned hourly observation for every coin.
-    # --------------------------------------------------------
-
-    clean_market_query = """
-        SELECT DISTINCT ON (mh.coin_id)
-            mh.coin_id,
-            c.symbol,
-            c.name,
-            mh.timestamp,
-            mh.price,
-            mh.market_cap,
-            mh.total_volume,
-            mh.created_at,
-            mh.updated_at
-        FROM market_hourly AS mh
-        INNER JOIN coins AS c
-            ON c.coin_id = mh.coin_id
-        ORDER BY
-            mh.coin_id,
-            mh.timestamp DESC
-    """
-
-    # --------------------------------------------------------
-    # CLEAN HISTORICAL DATA
-    # --------------------------------------------------------
-
-    clean_history_query = """
-        SELECT
-            coin_id,
-            timestamp,
-            price,
-            market_cap,
-            total_volume,
-            created_at,
-            updated_at
-        FROM market_hourly
-        ORDER BY
-            timestamp DESC,
-            coin_id
-        LIMIT 500
-    """
-
-    # --------------------------------------------------------
-    # DATA QUALITY / CLEANING SUMMARY
-    #
-    # These values are calculated directly from PostgreSQL.
-    # Nothing is hardcoded.
-    # --------------------------------------------------------
-
-    quality_query = """
-        SELECT
-
-            (
-                SELECT COUNT(*)
-                FROM market_history_raw
-                WHERE
-                    coin_id IS NULL
-                    OR timestamp IS NULL
-                    OR price IS NULL
-                    OR market_cap IS NULL
-                    OR total_volume IS NULL
-            ) AS raw_null_rows,
-
-            (
-                SELECT COALESCE(
-                    SUM(duplicate_count - 1),
-                    0
-                )
-                FROM (
-                    SELECT
-                        COUNT(*) AS duplicate_count
-                    FROM market_history_raw
-                    GROUP BY
-                        coin_id,
-                        timestamp
-                    HAVING COUNT(*) > 1
-                ) AS raw_duplicates
-            ) AS raw_duplicate_rows,
-
-            (
-                SELECT COUNT(*)
-                FROM market_hourly
-                WHERE
-                    coin_id IS NULL
-                    OR timestamp IS NULL
-                    OR price IS NULL
-                    OR market_cap IS NULL
-                    OR total_volume IS NULL
-            ) AS clean_null_rows,
-
-            (
-                SELECT COALESCE(
-                    SUM(duplicate_count - 1),
-                    0
-                )
-                FROM (
-                    SELECT
-                        COUNT(*) AS duplicate_count
-                    FROM market_hourly
-                    GROUP BY
-                        coin_id,
-                        timestamp
-                    HAVING COUNT(*) > 1
-                ) AS clean_duplicates
-            ) AS clean_duplicate_rows
     """
 
     try:
         with engine.connect() as connection:
 
             # ------------------------------------------------
-            # Current/latest snapshot per coin
+            # Latest record for each coin
             # ------------------------------------------------
 
             latest_result = connection.exec_driver_sql(
-                latest_snapshot_query
+                latest_query
             )
 
-            latest = rows_to_dicts(
-                latest_result
-            )
+            latest = [
+                dict(row._mapping)
+                for row in latest_result
+            ]
 
             # ------------------------------------------------
-            # Full database counts
+            # Counts
             # ------------------------------------------------
 
             counts_result = connection.exec_driver_sql(
                 counts_query
             ).first()
 
-            counts = (
-                dict(counts_result._mapping)
-                if counts_result
-                else {}
-            )
+            if counts_result:
+                counts = dict(
+                    counts_result._mapping
+                )
+            else:
+                counts = {}
 
             # ------------------------------------------------
-            # Coin metadata
+            # Coins
             # ------------------------------------------------
 
             coins_result = connection.exec_driver_sql(
                 coins_query
             )
 
-            coins = rows_to_dicts(
-                coins_result
-            )
+            coins = [
+                dict(row._mapping)
+                for row in coins_result
+            ]
 
             # ------------------------------------------------
-            # Raw market snapshots
+            # Raw history
             # ------------------------------------------------
 
-            raw_market_result = connection.exec_driver_sql(
-                raw_market_query
+            raw_history_result = (
+                connection.exec_driver_sql(
+                    raw_history_query
+                )
             )
 
-            raw_market = rows_to_dicts(
-                raw_market_result
-            )
+            raw_history = [
+                dict(row._mapping)
+                for row in raw_history_result
+            ]
 
             # ------------------------------------------------
-            # Raw historical data
+            # Clean hourly history
             # ------------------------------------------------
 
-            raw_history_result = connection.exec_driver_sql(
-                raw_history_query
+            clean_history_result = (
+                connection.exec_driver_sql(
+                    clean_history_query
+                )
             )
 
-            raw_history = rows_to_dicts(
-                raw_history_result
-            )
+            clean_history = [
+                dict(row._mapping)
+                for row in clean_history_result
+            ]
 
             # ------------------------------------------------
-            # Latest clean market data
+            # Market snapshots
             # ------------------------------------------------
 
-            clean_market_result = connection.exec_driver_sql(
-                clean_market_query
+            snapshots_result = (
+                connection.exec_driver_sql(
+                    snapshots_query
+                )
             )
 
-            clean_market = rows_to_dicts(
-                clean_market_result
-            )
-
-            # ------------------------------------------------
-            # Clean historical data
-            # ------------------------------------------------
-
-            clean_history_result = connection.exec_driver_sql(
-                clean_history_query
-            )
-
-            clean_history = rows_to_dicts(
-                clean_history_result
-            )
-
-            # ------------------------------------------------
-            # Cleaning / quality statistics
-            # ------------------------------------------------
-
-            quality_result = connection.exec_driver_sql(
-                quality_query
-            ).first()
-
-            quality = (
-                dict(quality_result._mapping)
-                if quality_result
-                else {}
-            )
+            snapshots = [
+                dict(row._mapping)
+                for row in snapshots_result
+            ]
 
         # ----------------------------------------------------
         # RESPONSE EXPECTED BY index.html
         # ----------------------------------------------------
 
-        response = {
+        return {
             "status": "success",
 
             "counts": {
@@ -580,48 +365,19 @@ def market_data():
                 ),
             },
 
-            # Current Coin Market
             "latest": latest,
 
-            # Live cleaning/data-quality statistics
-            "quality": {
-                "raw_null_rows": quality.get(
-                    "raw_null_rows",
-                    0,
-                ),
-                "raw_duplicate_rows": quality.get(
-                    "raw_duplicate_rows",
-                    0,
-                ),
-                "clean_null_rows": quality.get(
-                    "clean_null_rows",
-                    0,
-                ),
-                "clean_duplicate_rows": quality.get(
-                    "clean_duplicate_rows",
-                    0,
-                ),
-            },
-
-            # Raw database views
             "raw": {
                 "coins": coins,
-                "market_snapshots": raw_market,
                 "market_history": raw_history,
+                "market_snapshots": snapshots,
             },
 
-            # Clean database views
             "cleaned": {
-                "market_snapshots": clean_market,
                 "market_history": clean_history,
+                "market_snapshots": snapshots,
             },
         }
-
-        # Critical fix:
-        # PostgreSQL/driver data may contain NaN values.
-        # Strict JSON cannot serialize NaN.
-        # Convert only invalid JSON values to null.
-        return make_json_safe(response)
 
     except Exception as exc:
         print(
@@ -647,11 +403,11 @@ def predictions():
     try:
         rows = get_latest_predictions()
 
-        return make_json_safe({
+        return {
             "status": "success",
             "count": len(rows),
             "predictions": rows,
-        })
+        }
 
     except Exception as exc:
         print(
@@ -689,10 +445,10 @@ def predict(
             horizon_hours=horizon,
         )
 
-        return make_json_safe({
+        return {
             "status": "success",
             "result": result,
-        })
+        }
 
     except ValueError as exc:
         raise HTTPException(
@@ -741,10 +497,10 @@ def explain(
             horizon_hours=horizon,
         )
 
-        return make_json_safe({
+        return {
             "status": "success",
             "result": result,
-        })
+        }
 
     except ValueError as exc:
         raise HTTPException(
@@ -784,10 +540,10 @@ def daily_ingestion():
     try:
         result = run_daily_pipeline()
 
-        return make_json_safe({
+        return {
             "status": "success",
             "result": result,
-        })
+        }
 
     except Exception as exc:
         print(
