@@ -1,15 +1,9 @@
 # ============================================================
 # AlphaPulse - Quick Start
-# Windows bootstrap + project runner
+# Windows launcher
 # ============================================================
 
 $ErrorActionPreference = "Stop"
-
-Write-Host ""
-Write-Host "============================================================"
-Write-Host "        ALPHAPULSE - CRYPTO TREND PREDICTION"
-Write-Host "============================================================"
-Write-Host ""
 
 
 # ------------------------------------------------------------
@@ -34,6 +28,12 @@ function Stop-WithError {
 
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $ProjectRoot
+
+Write-Host ""
+Write-Host "============================================================"
+Write-Host "        ALPHAPULSE - CRYPTO TREND PREDICTION"
+Write-Host "============================================================"
+Write-Host ""
 
 Write-Host "[OK] Project directory: $ProjectRoot"
 
@@ -158,15 +158,11 @@ Write-Host "[OK] pip is available."
 
 
 # ------------------------------------------------------------
-# 7. Check/install project dependencies
+# 7. Install project dependencies
 # ------------------------------------------------------------
 
 Write-Host ""
 Write-Host "Checking project dependencies..."
-
-# Running pip install -r requirements.txt repeatedly is safe.
-# Packages that already satisfy requirements will be kept.
-# Missing packages will be installed automatically.
 
 & $VenvPython -m pip install -r $RequirementsFile
 
@@ -178,172 +174,38 @@ Write-Host "[OK] Project dependencies are installed."
 
 
 # ------------------------------------------------------------
-# 8. Check .env
+# 8. Run shared AlphaPulse bootstrap
 # ------------------------------------------------------------
 
-$EnvFile = Join-Path $ProjectRoot ".env"
-
 Write-Host ""
-Write-Host "Checking environment configuration..."
+Write-Host "Running shared AlphaPulse bootstrap..."
 
-if (-not (Test-Path $EnvFile)) {
+$SharedBootstrap = Join-Path $ProjectRoot "src\bootstrap.py"
 
-    Write-Host ""
-    Write-Host "[ERROR] .env file was not found."
-    Write-Host ""
-    Write-Host "Create:"
-    Write-Host "  $EnvFile"
-    Write-Host ""
-    Write-Host "Required configuration includes:"
-    Write-Host "  DATABASE_URL"
-    Write-Host "  COINGECKO_API_KEY"
-    Write-Host ""
-    Write-Host "Optional LLM functionality requires:"
-    Write-Host "  GROQ_API_KEY"
-    Write-Host ""
-
-    exit 1
+if (-not (Test-Path $SharedBootstrap)) {
+    Stop-WithError "Shared bootstrap module was not found: $SharedBootstrap"
 }
 
-Write-Host "[OK] .env file found."
-
-
-# ------------------------------------------------------------
-# 9. Validate required environment variables through Python
-# ------------------------------------------------------------
-
-Write-Host ""
-Write-Host "Validating required environment variables..."
-
-$EnvCheck = @'
-import os
-import sys
-from dotenv import load_dotenv
-
-# quick_start.ps1 already changes the working directory
-# to the project root, so use the .env path explicitly.
-# This avoids python-dotenv trying to inspect the call stack
-# when Python code is executed through stdin.
-load_dotenv(dotenv_path=".env")
-
-required = [
-    "DATABASE_URL",
-    "COINGECKO_API_KEY",
-]
-
-missing = [
-    name
-    for name in required
-    if not os.getenv(name)
-]
-
-if missing:
-    print("[ERROR] Missing required environment variable(s):")
-    for name in missing:
-        print(f"  - {name}")
-    sys.exit(1)
-
-print("[OK] DATABASE_URL is configured.")
-print("[OK] COINGECKO_API_KEY is configured.")
-
-if os.getenv("GROQ_API_KEY"):
-    print("[OK] GROQ_API_KEY is configured.")
-else:
-    print("[INFO] GROQ_API_KEY is not configured. AI explanations may be unavailable.")
-'@
-
-$EnvCheck | & $VenvPython -
+& $VenvPython -m src.bootstrap
 
 if ($LASTEXITCODE -ne 0) {
-    Stop-WithError "Environment validation failed."
+    Stop-WithError "Shared AlphaPulse bootstrap failed."
 }
 
 
 # ------------------------------------------------------------
-# 10. Test database connectivity
-# ------------------------------------------------------------
-
-Write-Host ""
-Write-Host "Testing PostgreSQL connection..."
-
-$DatabaseCheck = @'
-import sys
-
-try:
-    from sqlalchemy import text
-    from src.database.connection import engine
-
-    with engine.connect() as connection:
-        connection.execute(text("SELECT 1"))
-
-    print("[OK] PostgreSQL connection successful.")
-
-except Exception as exc:
-    print("[ERROR] PostgreSQL connection failed.")
-    print(str(exc))
-    sys.exit(1)
-'@
-
-$DatabaseCheck | & $VenvPython -
-
-if ($LASTEXITCODE -ne 0) {
-    Stop-WithError "Could not connect to PostgreSQL using DATABASE_URL."
-}
-
-
-# ------------------------------------------------------------
-# 11. Check production model artifacts
-# ------------------------------------------------------------
-
-Write-Host ""
-Write-Host "Checking production model artifacts..."
-
-$RequiredModels = @(
-    "artifacts\models\model_6h.joblib",
-    "artifacts\models\model_12h.joblib",
-    "artifacts\models\model_24h.joblib"
-)
-
-$MissingModels = @()
-
-foreach ($ModelPath in $RequiredModels) {
-
-    $FullModelPath = Join-Path $ProjectRoot $ModelPath
-
-    if (-not (Test-Path $FullModelPath)) {
-        $MissingModels += $ModelPath
-    }
-}
-
-if ($MissingModels.Count -eq 0) {
-    Write-Host "[OK] Production model artifacts found."
-}
-else {
-
-    Write-Host "[WARNING] Some production model artifacts are missing:"
-
-    foreach ($MissingModel in $MissingModels) {
-        Write-Host "  - $MissingModel"
-    }
-
-    Write-Host ""
-    Write-Host "[INFO] You can generate production models using menu option 8."
-}
-
-
-# ------------------------------------------------------------
-# 12. Environment ready
+# 9. Environment ready
 # ------------------------------------------------------------
 
 Write-Host ""
 Write-Host "============================================================"
-Write-Host "ALPHAPULSE ENVIRONMENT READY"
+Write-Host "ALPHAPULSE WINDOWS ENVIRONMENT READY"
 Write-Host "============================================================"
 Write-Host ""
 
 
 # ------------------------------------------------------------
-# 13. Show menu
+# 10. Show menu
 # ------------------------------------------------------------
 
 Write-Host "What do you want to run?"
@@ -363,7 +225,7 @@ $choice = Read-Host "Enter option"
 
 
 # ------------------------------------------------------------
-# 14. Run selected stage
+# 11. Run selected stage
 # ------------------------------------------------------------
 
 switch ($choice) {
@@ -429,7 +291,7 @@ switch ($choice) {
 
 
 # ------------------------------------------------------------
-# 15. Validate selected command
+# 12. Validate selected command
 # ------------------------------------------------------------
 
 if ($LASTEXITCODE -ne 0) {
