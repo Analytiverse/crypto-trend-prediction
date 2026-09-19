@@ -29,7 +29,7 @@ import json
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
-from src.services.prediction_service import generate_prediction
+from src.controllers.prediction_controller import get_prediction
 
 
 # ============================================================
@@ -260,7 +260,7 @@ class handler(BaseHTTPRequestHandler):
                 horizon_parameter
             )
 
-            prediction = generate_prediction(
+            prediction = get_prediction(
                 asset=asset,
                 horizon_hours=horizon,
       )
