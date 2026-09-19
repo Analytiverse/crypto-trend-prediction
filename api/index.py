@@ -27,7 +27,7 @@ from fastapi.responses import FileResponse
 
 from src.infrastructure.database.connection import engine
 from src.repositories.prediction_repository import get_latest_predictions
-from src.llm.explanation_service import explain_prediction
+from src.services.explanation_service import explain_prediction
 from src.pipelines.daily_market_pipeline import run_daily_pipeline
 from src.services.prediction_service import generate_prediction
 

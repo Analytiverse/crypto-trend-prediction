@@ -1,43 +1,20 @@
 """
-AlphaPulse LLM Explanation Service
+AlphaPulse explanation application service.
 
-The ML model makes the actual market prediction.
-The Groq-hosted LLM only explains that prediction.
+The machine-learning system generates the market prediction.
+The Groq-hosted LLM only explains that prediction using
+controlled AlphaPulse prediction context.
 """
 
 from __future__ import annotations
 
-import os
-import sys
-
-from dotenv import load_dotenv
-from groq import Groq
-
-from src.ml.inference.predictor import predict_trend
-
-
-# ============================================================
-# ENVIRONMENT
-# ============================================================
-
-load_dotenv()
-
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-
-if not GROQ_API_KEY:
-    raise RuntimeError(
-        "GROQ_API_KEY was not found. "
-        "Add it to the project .env file."
-    )
-
-
-# ============================================================
-# CONFIGURATION
-# ============================================================
-
-LLM_MODEL = "openai/gpt-oss-120b"
-
-client = Groq(api_key=GROQ_API_KEY)
+from src.infrastructure.llm.groq_client import (
+    LLM_MODEL,
+    generate_explanation,
+)
+from src.services.prediction_service import (
+    generate_prediction,
+)
 
 
 # ============================================================
@@ -98,10 +75,20 @@ Important rules:
 # BUILD GROUNDED CONTEXT
 # ============================================================
 
-def build_prediction_context(prediction: dict) -> str:
-    probabilities = prediction["probabilities"]
+def build_prediction_context(
+    prediction: dict,
+) -> str:
+    """
+    Convert an AlphaPulse prediction into controlled LLM context.
+    """
 
-    threshold_percent = prediction["threshold"] * 100
+    probabilities = prediction[
+        "probabilities"
+    ]
+
+    threshold_percent = (
+        prediction["threshold"] * 100
+    )
 
     return f"""
 ALPHAPULSE PREDICTION
@@ -151,12 +138,16 @@ def explain_prediction(
     horizon_hours: int,
     question: str | None = None,
 ) -> dict:
+    """
+    Generate a grounded natural-language explanation for an
+    AlphaPulse machine-learning prediction.
+    """
 
     # --------------------------------------------------------
-    # 1. Get prediction from our existing ML pipeline
+    # 1. Generate prediction through the application service
     # --------------------------------------------------------
 
-    prediction = predict_trend(
+    prediction = generate_prediction(
         asset=asset,
         horizon_hours=horizon_hours,
     )
@@ -165,8 +156,10 @@ def explain_prediction(
     # 2. Convert prediction to controlled LLM context
     # --------------------------------------------------------
 
-    prediction_context = build_prediction_context(
-        prediction
+    prediction_context = (
+        build_prediction_context(
+            prediction
+        )
     )
 
     # --------------------------------------------------------
@@ -192,40 +185,21 @@ Do not introduce external market information.
 """.strip()
 
     # --------------------------------------------------------
-    # 4. Call Groq
+    # 4. Call Groq infrastructure
     # --------------------------------------------------------
 
-    completion = client.chat.completions.create(
-        model=LLM_MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": SYSTEM_PROMPT,
-            },
-            {
-                "role": "user",
-                "content": user_prompt,
-            },
-        ],
-        temperature=0.2,
-        max_completion_tokens=500,
+    explanation = generate_explanation(
+        system_prompt=SYSTEM_PROMPT,
+        user_prompt=user_prompt,
     )
-
-    explanation = completion.choices[0].message.content
-
-    if not explanation:
-        raise RuntimeError(
-            "Groq returned an empty explanation."
-        )
-
-    explanation = explanation.strip()
 
     # --------------------------------------------------------
     # 5. Structured response
     # --------------------------------------------------------
 
     return {
-        "asset": prediction["asset"],
+        "asset":
+            prediction["asset"],
         "horizon_hours":
             prediction["prediction_horizon_hours"],
         "prediction_timestamp":
@@ -253,94 +227,3 @@ Do not introduce external market information.
                 "It is not financial advice."
             ),
     }
-
-
-# ============================================================
-# CLI TEST
-# ============================================================
-
-def main() -> None:
-
-    asset = "BTC"
-    horizon = 6
-
-    if len(sys.argv) >= 2:
-        asset = sys.argv[1]
-
-    if len(sys.argv) >= 3:
-        horizon = int(sys.argv[2])
-
-    print()
-    print("=" * 70)
-    print("ALPHAPULSE GROQ LLM TEST")
-    print("=" * 70)
-
-    print()
-    print(
-        f"Generating {asset.upper()} "
-        f"{horizon}h ML prediction..."
-    )
-
-    print(
-        "Sending prediction context to Groq..."
-    )
-
-    result = explain_prediction(
-        asset=asset,
-        horizon_hours=horizon,
-    )
-
-    print()
-    print("=" * 70)
-    print("ML PREDICTION")
-    print("=" * 70)
-
-    print("Asset:", result["asset"])
-    print(
-        "Horizon:",
-        f"{result['horizon_hours']}h",
-    )
-    print(
-        "Trend:",
-        result["predicted_trend"],
-    )
-    print(
-        "Confidence:",
-        f"{result['model_confidence'] * 100:.2f}%",
-    )
-
-    print()
-    print("Probabilities:")
-
-    for label, probability in (
-        result["probabilities"].items()
-    ):
-        print(
-            f"  {label}: "
-            f"{probability * 100:.2f}%"
-        )
-
-    print()
-    print("=" * 70)
-    print("GROQ LLM EXPLANATION")
-    print("=" * 70)
-    print()
-
-    print(result["explanation"])
-
-    print()
-    print(
-        "LLM provider:",
-        result["llm_provider"],
-    )
-    print(
-        "LLM model:",
-        result["llm_model"],
-    )
-
-    print()
-    print(result["disclaimer"])
-
-
-if __name__ == "__main__":
-    main()
