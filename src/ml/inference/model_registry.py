@@ -9,14 +9,11 @@ from __future__ import annotations
 
 import json
 from functools import lru_cache
-from pathlib import Path
 
 import joblib
 
+from src.core.config import PROJECT_ROOT
 
-PROJECT_ROOT = Path(
-    __file__
-).resolve().parents[2]
 
 MODEL_DIR = (
     PROJECT_ROOT

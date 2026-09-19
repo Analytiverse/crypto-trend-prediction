@@ -13,7 +13,7 @@ import sys
 from dotenv import load_dotenv
 from groq import Groq
 
-from src.prediction.predictor import predict_trend
+from src.ml.inference.predictor import predict_trend
 
 
 # ============================================================

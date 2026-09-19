@@ -29,7 +29,7 @@ import json
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
-from src.prediction.predictor import predict_trend
+from src.ml.inference.predictor import predict_trend
 
 
 # ============================================================

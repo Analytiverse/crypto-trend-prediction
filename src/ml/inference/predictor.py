@@ -3,17 +3,17 @@ Live prediction service for AlphaPulse.
 
 Examples:
 
-    python -m src.prediction.predictor bitcoin 6
+    python -m src.ml.inference.predictor bitcoin 6
 
-    python -m src.prediction.predictor ethereum 12
+    python -m src.ml.inference.predictor ethereum 12
 
-    python -m src.prediction.predictor solana 24
+    python -m src.ml.inference.predictor solana 24
 
 Short symbols are also supported:
 
-    python -m src.prediction.predictor BTC 6
+    python -m src.ml.inference.predictor BTC 6
 
-    python -m src.prediction.predictor ETH 24
+    python -m src.ml.inference.predictor ETH 24
 """
 
 from __future__ import annotations
@@ -25,14 +25,14 @@ import numpy as np
 
 from src.core.config import COINS
 
-from src.prediction.feature_builder import (
+from src.ml.features.feature_builder import (
     ML_FEATURES,
     build_features,
     get_latest_feature_row,
     load_recent_market_data,
 )
 
-from src.prediction.model_registry import (
+from src.ml.inference.model_registry import (
     load_metadata,
     load_model,
     validate_horizon,
@@ -515,7 +515,7 @@ def main() -> None:
 
         print(
             "python -m "
-            "src.prediction.predictor "
+            "src.ml.inference.predictor "
             "<asset> <horizon>"
         )
 
@@ -527,19 +527,19 @@ def main() -> None:
 
         print(
             "python -m "
-            "src.prediction.predictor "
+            "src.ml.inference.predictor "
             "BTC 6"
         )
 
         print(
             "python -m "
-            "src.prediction.predictor "
+            "src.ml.inference.predictor "
             "ethereum 12"
         )
 
         print(
             "python -m "
-            "src.prediction.predictor "
+            "src.ml.inference.predictor "
             "SOL 24"
         )
 

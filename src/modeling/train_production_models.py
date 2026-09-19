@@ -37,7 +37,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from src.prediction.feature_builder import (
+from src.ml.features.feature_builder import (
     ML_FEATURES,
     build_features,
     load_all_market_data,

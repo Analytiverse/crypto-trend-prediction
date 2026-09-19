@@ -44,7 +44,7 @@ from src.processing.clean_history import (
     clean_history_dataframe,
 )
 
-from src.prediction.batch_predictor import (
+from src.ml.inference.batch_predictor import (
     run_batch_predictions,
 )
 
