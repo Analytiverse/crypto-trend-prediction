@@ -74,43 +74,43 @@ switch ($choice) {
     "2" {
         Write-Host ""
         Write-Host "Running majority baseline..."
-        python -m src.modeling.run_baselines
+        python -m src.ml.evaluation.run_baselines
     }
 
     "3" {
         Write-Host ""
         Write-Host "Training Logistic Regression..."
-        python -m src.modeling.train_logistic_regression
+        python -m src.ml.training.train_logistic_regression
     }
 
     "4" {
         Write-Host ""
         Write-Host "Training Random Forest..."
-        python -m src.modeling.train_random_forest
+        python -m src.ml.training.train_random_forest
     }
 
     "5" {
         Write-Host ""
         Write-Host "Training XGBoost..."
-        python -m src.modeling.train_xgboost
+        python -m src.ml.training.train_xgboost
     }
 
     "6" {
         Write-Host ""
         Write-Host "Comparing models..."
-        python -m src.modeling.compare_models
+        python -m src.ml.evaluation.compare_models
     }
 
     "7" {
         Write-Host ""
         Write-Host "Running final test evaluation..."
-        python -m src.modeling.evaluate_final_test
+        python -m src.ml.evaluation.evaluate_final_test
     }
 
     "8" {
         Write-Host ""
         Write-Host "Training production models..."
-        python -m src.modeling.train_production_models
+        python -m src.ml.training.train_production_models
     }
 
     "9" {
@@ -125,13 +125,6 @@ switch ($choice) {
         exit 1
     }
 }
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Host ""
-    Write-Host "[ERROR] Program failed with exit code $LASTEXITCODE."
-    exit $LASTEXITCODE
-}
-
 Write-Host ""
 Write-Host "============================================================"
 Write-Host "[DONE] Command completed successfully."
