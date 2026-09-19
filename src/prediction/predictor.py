@@ -23,7 +23,7 @@ import sys
 
 import numpy as np
 
-from src.config import COINS
+from src.core.config import COINS
 
 from src.prediction.feature_builder import (
     ML_FEATURES,

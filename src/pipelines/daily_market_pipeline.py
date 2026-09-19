@@ -18,7 +18,7 @@ Important:
     It does NOT retrain production models.
 """
 
-from src.config import COINS
+from src.core.config import COINS
 
 from src.database.repository import (
     upsert_hourly_history,

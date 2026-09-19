@@ -1,7 +1,7 @@
 import pandas as pd
 from sqlalchemy import text
 
-from src.config import COINS
+from src.core.config import COINS
 from src.database.connection import get_engine
 from src.database.repository import (
     upsert_hourly_history,

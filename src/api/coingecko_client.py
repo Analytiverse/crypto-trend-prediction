@@ -2,7 +2,7 @@ import time
 
 import requests
 
-from config import (
+from src.core.config import (
     API_KEY,
     BASE_URL,
     MAX_RETRIES,
