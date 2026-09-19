@@ -25,8 +25,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
-from src.database.connection import engine
-from src.database.prediction_repository import get_latest_predictions
+from src.infrastructure.database.connection import engine
+from src.repositories.prediction_repository import get_latest_predictions
 from src.llm.explanation_service import explain_prediction
 from src.pipelines.daily_market_pipeline import run_daily_pipeline
 from src.prediction.predictor import predict_trend

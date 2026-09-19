@@ -20,7 +20,7 @@ Important:
 
 from src.core.config import COINS
 
-from src.database.repository import (
+from src.repositories.market_repository import (
     upsert_hourly_history,
     upsert_raw_history,
     upsert_market_snapshots,

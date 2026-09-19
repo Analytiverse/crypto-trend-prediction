@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from sqlalchemy import text
 from src.modeling.build_temporal_dataset import build_temporal_datasets
-from src.database.connection import engine
+from src.infrastructure.database.connection import engine
 
 
 # ---------------------------------------------------------

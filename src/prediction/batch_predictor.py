@@ -15,7 +15,7 @@ import sys
 from datetime import datetime, timezone
 from typing import Any
 
-from src.database.prediction_repository import (
+from src.repositories.prediction_repository import (
     upsert_prediction_batch,
 )
 

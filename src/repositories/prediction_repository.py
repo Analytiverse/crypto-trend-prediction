@@ -15,7 +15,7 @@ from typing import Any
 
 from sqlalchemy import text
 
-from src.database.connection import get_engine
+from src.infrastructure.database.connection import get_engine
 
 
 # ---------------------------------------------------------------------

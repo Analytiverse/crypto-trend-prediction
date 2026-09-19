@@ -72,7 +72,7 @@ def test_database_connection():
     print("")
     print("Testing PostgreSQL connection...")
 
-    from src.database.connection import get_engine
+    from src.infrastructure.database.connection import get_engine
 
     engine = get_engine()
 

@@ -1,7 +1,7 @@
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-from src.database.connection import get_engine
+from src.infrastructure.database.connection import get_engine
 
 
 def test_database_connection() -> None:
