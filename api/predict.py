@@ -29,7 +29,7 @@ import json
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
-from src.ml.inference.predictor import predict_trend
+from src.services.prediction_service import generate_prediction
 
 
 # ============================================================
@@ -260,10 +260,10 @@ class handler(BaseHTTPRequestHandler):
                 horizon_parameter
             )
 
-            prediction = predict_trend(
+            prediction = generate_prediction(
                 asset=asset,
-                horizon=horizon,
-            )
+                horizon_hours=horizon,
+      )
 
             response = {
                 "success": True,
