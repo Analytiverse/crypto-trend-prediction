@@ -27,7 +27,9 @@ from src.repositories.prediction_repository import get_latest_predictions
 from src.controllers.explanation_controller import (
     get_prediction_explanation,
 )
-from src.pipelines.daily_market_pipeline import run_daily_pipeline
+from src.controllers.pipeline_controller import (
+    run_daily_market_update,
+)
 from src.controllers.prediction_controller import get_prediction
 
 
@@ -541,7 +543,7 @@ def daily_ingestion():
     """
 
     try:
-        result = run_daily_pipeline()
+        result = run_daily_market_update()
 
         return {
             "status": "success",
