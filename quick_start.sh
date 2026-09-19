@@ -199,43 +199,43 @@ case "$choice" in
     2)
         echo ""
         echo "Running majority baseline..."
-        "$VENV_PYTHON" -m src.modeling.run_baselines
+        "$VENV_PYTHON" -m src.ml.evaluation.run_baselines
         ;;
 
     3)
         echo ""
         echo "Training Logistic Regression..."
-        "$VENV_PYTHON" -m src.modeling.train_logistic_regression
+        "$VENV_PYTHON" -m src.ml.training.train_logistic_regression
         ;;
 
     4)
         echo ""
         echo "Training Random Forest..."
-        "$VENV_PYTHON" -m src.modeling.train_random_forest
+        "$VENV_PYTHON" -m src.ml.training.train_random_forest
         ;;
 
     5)
         echo ""
         echo "Training XGBoost..."
-        "$VENV_PYTHON" -m src.modeling.train_xgboost
+        "$VENV_PYTHON" -m src.ml.training.train_xgboost
         ;;
 
     6)
         echo ""
         echo "Comparing models..."
-        "$VENV_PYTHON" -m src.modeling.compare_models
+        "$VENV_PYTHON" -m src.ml.evaluation.compare_models
         ;;
 
     7)
         echo ""
         echo "Running final test evaluation..."
-        "$VENV_PYTHON" -m src.modeling.evaluate_final_test
+        "$VENV_PYTHON" -m src.ml.evaluation.evaluate_final_test
         ;;
 
     8)
         echo ""
         echo "Training production models..."
-        "$VENV_PYTHON" -m src.modeling.train_production_models
+        "$VENV_PYTHON" -m src.ml.training.train_production_models
         ;;
 
     9)
@@ -248,7 +248,6 @@ case "$choice" in
         stop_with_error "Invalid option."
         ;;
 esac
-
 
 # ------------------------------------------------------------
 # 12. Complete

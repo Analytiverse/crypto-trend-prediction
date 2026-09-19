@@ -239,43 +239,43 @@ switch ($choice) {
     "2" {
         Write-Host ""
         Write-Host "Running majority baseline..."
-        & $VenvPython -m src.modeling.run_baselines
+        & $VenvPython -m src.ml.evaluation.run_baselines
     }
 
     "3" {
         Write-Host ""
         Write-Host "Training Logistic Regression..."
-        & $VenvPython -m src.modeling.train_logistic_regression
+        & $VenvPython -m src.ml.training.train_logistic_regression
     }
 
     "4" {
         Write-Host ""
         Write-Host "Training Random Forest..."
-        & $VenvPython -m src.modeling.train_random_forest
+        & $VenvPython -m src.ml.training.train_random_forest
     }
 
     "5" {
         Write-Host ""
         Write-Host "Training XGBoost..."
-        & $VenvPython -m src.modeling.train_xgboost
+        & $VenvPython -m src.ml.training.train_xgboost
     }
 
     "6" {
         Write-Host ""
         Write-Host "Comparing models..."
-        & $VenvPython -m src.modeling.compare_models
+        & $VenvPython -m src.ml.evaluation.compare_models
     }
 
     "7" {
         Write-Host ""
         Write-Host "Running final test evaluation..."
-        & $VenvPython -m src.modeling.evaluate_final_test
+        & $VenvPython -m src.ml.evaluation.evaluate_final_test
     }
 
     "8" {
         Write-Host ""
         Write-Host "Training production models..."
-        & $VenvPython -m src.modeling.train_production_models
+        & $VenvPython -m src.ml.training.train_production_models
     }
 
     "9" {

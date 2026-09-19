@@ -102,6 +102,9 @@ def validate_horizon(
 @lru_cache(
     maxsize=3
 )
+@lru_cache(
+    maxsize=3
+)
 def load_model(
     horizon_hours: int,
 ):
@@ -128,13 +131,12 @@ def load_model(
             f"{model_path}\n"
             "Run:\n"
             "python -m "
-            "src.modeling.train_production_models"
+            "src.ml.training.train_production_models"
         )
 
     return joblib.load(
         model_path
     )
-
 
 @lru_cache(
     maxsize=3
