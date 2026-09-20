@@ -16,9 +16,179 @@ function Stop-WithError {
     )
 
     Write-Host ""
-    Write-Host "[ERROR] $Message"
+    Write-Host "[ERROR] $Message" -ForegroundColor Red
     Write-Host ""
     exit 1
+}
+
+
+# ------------------------------------------------------------
+# Helper: securely request a missing environment variable
+# ------------------------------------------------------------
+
+function Read-SecretValue {
+    param(
+        [string]$VariableName
+    )
+
+    $SecureValue = Read-Host "Enter value for $VariableName" -AsSecureString
+
+    $BSTR = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureValue)
+
+    try {
+        return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($BSTR)
+    }
+    finally {
+        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+    }
+}
+
+
+# ------------------------------------------------------------
+# Helper: read variable from .env
+# ------------------------------------------------------------
+
+function Get-DotEnvValue {
+    param(
+        [string]$EnvFile,
+        [string]$VariableName
+    )
+
+    if (-not (Test-Path $EnvFile)) {
+        return $null
+    }
+
+    foreach ($Line in Get-Content $EnvFile) {
+
+        $TrimmedLine = $Line.Trim()
+
+        if ([string]::IsNullOrWhiteSpace($TrimmedLine)) {
+            continue
+        }
+
+        if ($TrimmedLine.StartsWith("#")) {
+            continue
+        }
+
+        $Parts = $TrimmedLine -split "=", 2
+
+        if ($Parts.Count -ne 2) {
+            continue
+        }
+
+        $Name = $Parts[0].Trim()
+
+        if ($Name -ne $VariableName) {
+            continue
+        }
+
+        $Value = $Parts[1].Trim()
+
+        # Remove matching surrounding quotes
+        if ($Value.Length -ge 2) {
+
+            if (
+                ($Value.StartsWith('"') -and $Value.EndsWith('"')) -or
+                ($Value.StartsWith("'") -and $Value.EndsWith("'"))
+            ) {
+                $Value = $Value.Substring(1, $Value.Length - 2)
+            }
+        }
+
+        return $Value
+    }
+
+    return $null
+}
+
+
+# ------------------------------------------------------------
+# Helper: safely add/update variable in .env
+# ------------------------------------------------------------
+
+function Set-DotEnvValue {
+    param(
+        [string]$EnvFile,
+        [string]$VariableName,
+        [string]$VariableValue
+    )
+
+    $Lines = @()
+
+    if (Test-Path $EnvFile) {
+        $Lines = @(Get-Content $EnvFile)
+    }
+
+    $UpdatedLines = @()
+    $Found = $false
+
+    foreach ($Line in $Lines) {
+
+        $TrimmedLine = $Line.Trim()
+
+        if (
+            -not $TrimmedLine.StartsWith("#") -and
+            $TrimmedLine -match "^\s*$([regex]::Escape($VariableName))\s*="
+        ) {
+            $UpdatedLines += "$VariableName=$VariableValue"
+            $Found = $true
+        }
+        else {
+            $UpdatedLines += $Line
+        }
+    }
+
+    if (-not $Found) {
+
+        if (
+            $UpdatedLines.Count -gt 0 -and
+            -not [string]::IsNullOrWhiteSpace($UpdatedLines[-1])
+        ) {
+            $UpdatedLines += ""
+        }
+
+        $UpdatedLines += "$VariableName=$VariableValue"
+    }
+
+    Set-Content `
+        -Path $EnvFile `
+        -Value $UpdatedLines `
+        -Encoding UTF8
+}
+
+
+# ------------------------------------------------------------
+# Helper: detect placeholder values
+# ------------------------------------------------------------
+
+function Test-PlaceholderValue {
+    param(
+        [string]$Value
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $true
+    }
+
+    $Normalized = $Value.Trim().ToLower()
+
+    $Placeholders = @(
+        "your_api_key",
+        "your-api-key",
+        "your_key",
+        "your-key",
+        "changeme",
+        "change_me",
+        "replace_me",
+        "replace-me",
+        "placeholder",
+        "<your_api_key>",
+        "<your_database_url>",
+        "<your_cron_secret>",
+        "<your_groq_api_key>"
+    )
+
+    return $Placeholders -contains $Normalized
 }
 
 
@@ -57,13 +227,16 @@ else {
     Stop-WithError "Python was not found. Install Python 3.10+ and run quick_start.ps1 again."
 }
 
+
 try {
+
     if ($PythonCommand -eq "py") {
         $PythonVersion = & py --version 2>&1
     }
     else {
         $PythonVersion = & python --version 2>&1
     }
+
 }
 catch {
     Stop-WithError "Python was detected but could not be executed."
@@ -73,7 +246,55 @@ Write-Host "[OK] $PythonVersion"
 
 
 # ------------------------------------------------------------
-# 3. Create virtual environment when missing
+# 3. Validate Python >= 3.10
+# ------------------------------------------------------------
+
+Write-Host "Checking Python version compatibility..."
+
+if ($PythonCommand -eq "py") {
+
+    $VersionCheck = & py -c `
+        "import sys; print(1 if sys.version_info >= (3,10) else 0)"
+
+}
+else {
+
+    $VersionCheck = & python -c `
+        "import sys; print(1 if sys.version_info >= (3,10) else 0)"
+}
+
+
+if ($VersionCheck -ne "1") {
+    Stop-WithError "AlphaPulse requires Python 3.10 or newer. Detected: $PythonVersion"
+}
+
+Write-Host "[OK] Python version is compatible."
+
+
+# ------------------------------------------------------------
+# 4. Check important project files
+# ------------------------------------------------------------
+
+Write-Host ""
+Write-Host "Checking project files..."
+
+$RequirementsFile = Join-Path $ProjectRoot "requirements.txt"
+$SharedBootstrap = Join-Path $ProjectRoot "src\bootstrap.py"
+
+if (-not (Test-Path $RequirementsFile)) {
+    Stop-WithError "requirements.txt was not found in the project root."
+}
+
+if (-not (Test-Path $SharedBootstrap)) {
+    Stop-WithError "Shared bootstrap module was not found: $SharedBootstrap"
+}
+
+Write-Host "[OK] requirements.txt found."
+Write-Host "[OK] src/bootstrap.py found."
+
+
+# ------------------------------------------------------------
+# 5. Create virtual environment when missing
 # ------------------------------------------------------------
 
 $VenvDirectory = Join-Path $ProjectRoot ".venv"
@@ -109,7 +330,7 @@ else {
 
 
 # ------------------------------------------------------------
-# 4. Activate virtual environment
+# 6. Activate virtual environment
 # ------------------------------------------------------------
 
 if (-not (Test-Path $VenvActivate)) {
@@ -120,29 +341,17 @@ try {
     & $VenvActivate
 }
 catch {
+
     Write-Host ""
     Write-Host "[WARNING] PowerShell blocked virtual environment activation."
-    Write-Host "[INFO] AlphaPulse can still continue using .venv Python directly."
+    Write-Host "[INFO] AlphaPulse will continue using .venv Python directly."
 }
 
 Write-Host "[OK] Virtual environment ready."
 
 
 # ------------------------------------------------------------
-# 5. Check requirements.txt
-# ------------------------------------------------------------
-
-$RequirementsFile = Join-Path $ProjectRoot "requirements.txt"
-
-if (-not (Test-Path $RequirementsFile)) {
-    Stop-WithError "requirements.txt was not found in the project root."
-}
-
-Write-Host "[OK] requirements.txt found."
-
-
-# ------------------------------------------------------------
-# 6. Check pip
+# 7. Check pip
 # ------------------------------------------------------------
 
 Write-Host ""
@@ -158,11 +367,28 @@ Write-Host "[OK] pip is available."
 
 
 # ------------------------------------------------------------
-# 7. Install project dependencies
+# 8. Upgrade pip
 # ------------------------------------------------------------
 
 Write-Host ""
-Write-Host "Checking project dependencies..."
+Write-Host "Checking/upgrading pip..."
+
+& $VenvPython -m pip install --upgrade pip
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "[WARNING] pip upgrade failed. Continuing with the installed pip version."
+}
+else {
+    Write-Host "[OK] pip is up to date."
+}
+
+
+# ------------------------------------------------------------
+# 9. Install/sync project dependencies
+# ------------------------------------------------------------
+
+Write-Host ""
+Write-Host "Installing/syncing project dependencies..."
 
 & $VenvPython -m pip install -r $RequirementsFile
 
@@ -174,17 +400,236 @@ Write-Host "[OK] Project dependencies are installed."
 
 
 # ------------------------------------------------------------
-# 8. Run shared AlphaPulse bootstrap
+# 10. Prepare .env
+# ------------------------------------------------------------
+
+Write-Host ""
+Write-Host "Checking environment configuration..."
+
+$EnvFile = Join-Path $ProjectRoot ".env"
+$EnvExampleFile = Join-Path $ProjectRoot ".env.example"
+
+
+if (-not (Test-Path $EnvFile)) {
+
+    Write-Host "[INFO] .env file was not found."
+
+    if (Test-Path $EnvExampleFile) {
+
+        Write-Host "[INFO] Creating .env from .env.example..."
+
+        Copy-Item `
+            -Path $EnvExampleFile `
+            -Destination $EnvFile
+
+        Write-Host "[OK] .env created from .env.example."
+    }
+    else {
+
+        Write-Host "[INFO] .env.example was not found."
+        Write-Host "[INFO] Creating empty .env..."
+
+        New-Item `
+            -Path $EnvFile `
+            -ItemType File `
+            -Force | Out-Null
+
+        Write-Host "[OK] Empty .env created."
+    }
+}
+else {
+    Write-Host "[OK] .env file found."
+}
+
+
+# ------------------------------------------------------------
+# 11. Check .gitignore protection
+# ------------------------------------------------------------
+
+$GitIgnoreFile = Join-Path $ProjectRoot ".gitignore"
+
+if (Test-Path $GitIgnoreFile) {
+
+    $GitIgnoreContent = Get-Content $GitIgnoreFile
+
+    $EnvIgnored = $false
+
+    foreach ($Line in $GitIgnoreContent) {
+
+        $Trimmed = $Line.Trim()
+
+        if (
+            $Trimmed -eq ".env" -or
+            $Trimmed -eq "/.env"
+        ) {
+            $EnvIgnored = $true
+            break
+        }
+    }
+
+    if ($EnvIgnored) {
+        Write-Host "[OK] .env is protected by .gitignore."
+    }
+    else {
+        Write-Host "[WARNING] .env is not listed in .gitignore."
+        Write-Host "[WARNING] Add '.env' to .gitignore before committing."
+    }
+}
+else {
+    Write-Host "[WARNING] .gitignore was not found."
+    Write-Host "[WARNING] Make sure .env is never committed."
+}
+
+
+# ------------------------------------------------------------
+# 12. Check / assign required environment variables
+# ------------------------------------------------------------
+
+Write-Host ""
+Write-Host "Checking required environment variables..."
+
+
+$RequiredEnvVars = @(
+    "COINGECKO_API_KEY",
+    "DATABASE_URL",
+    "CRON_SECRET",
+    "GROQ_API_KEY"
+)
+
+
+foreach ($VariableName in $RequiredEnvVars) {
+
+    # --------------------------------------------------------
+    # Priority 1: already assigned to current process / OS
+    # --------------------------------------------------------
+
+    $CurrentValue = [Environment]::GetEnvironmentVariable(
+        $VariableName,
+        "Process"
+    )
+
+
+    if (
+        -not [string]::IsNullOrWhiteSpace($CurrentValue) -and
+        -not (Test-PlaceholderValue $CurrentValue)
+    ) {
+
+        Write-Host "[OK] $VariableName already assigned in environment."
+        continue
+    }
+
+
+    # --------------------------------------------------------
+    # Priority 2: value available in .env
+    # --------------------------------------------------------
+
+    $DotEnvValue = Get-DotEnvValue `
+        -EnvFile $EnvFile `
+        -VariableName $VariableName
+
+
+    if (
+        -not [string]::IsNullOrWhiteSpace($DotEnvValue) -and
+        -not (Test-PlaceholderValue $DotEnvValue)
+    ) {
+
+        [Environment]::SetEnvironmentVariable(
+            $VariableName,
+            $DotEnvValue,
+            "Process"
+        )
+
+        Write-Host "[OK] $VariableName loaded from .env and assigned."
+
+        continue
+    }
+
+
+    # --------------------------------------------------------
+    # Priority 3: ask once and persist
+    # --------------------------------------------------------
+
+    Write-Host ""
+    Write-Host "[INFO] $VariableName is not configured."
+    Write-Host "[INFO] Enter it once. It will be saved in .env."
+
+
+    $EnteredValue = Read-SecretValue `
+        -VariableName $VariableName
+
+
+    if (
+        [string]::IsNullOrWhiteSpace($EnteredValue) -or
+        (Test-PlaceholderValue $EnteredValue)
+    ) {
+        Stop-WithError "$VariableName must contain a valid value."
+    }
+
+
+    # Basic DATABASE_URL validation
+    if ($VariableName -eq "DATABASE_URL") {
+
+        if (
+            -not $EnteredValue.StartsWith("postgresql://") -and
+            -not $EnteredValue.StartsWith("postgres://")
+        ) {
+            Stop-WithError "DATABASE_URL must start with postgresql:// or postgres://"
+        }
+    }
+
+
+    Set-DotEnvValue `
+        -EnvFile $EnvFile `
+        -VariableName $VariableName `
+        -VariableValue $EnteredValue
+
+
+    [Environment]::SetEnvironmentVariable(
+        $VariableName,
+        $EnteredValue,
+        "Process"
+    )
+
+
+    Write-Host "[OK] $VariableName saved to .env and assigned."
+}
+
+
+# ------------------------------------------------------------
+# 13. Final environment verification
+# ------------------------------------------------------------
+
+Write-Host ""
+Write-Host "Verifying environment variables..."
+
+
+foreach ($VariableName in $RequiredEnvVars) {
+
+    $FinalValue = [Environment]::GetEnvironmentVariable(
+        $VariableName,
+        "Process"
+    )
+
+    if (
+        [string]::IsNullOrWhiteSpace($FinalValue) -or
+        (Test-PlaceholderValue $FinalValue)
+    ) {
+        Stop-WithError "$VariableName is still missing after environment setup."
+    }
+
+    Write-Host "[OK] $VariableName ready."
+}
+
+
+Write-Host "[OK] All required environment variables are assigned."
+
+
+# ------------------------------------------------------------
+# 14. Run shared AlphaPulse bootstrap
 # ------------------------------------------------------------
 
 Write-Host ""
 Write-Host "Running shared AlphaPulse bootstrap..."
-
-$SharedBootstrap = Join-Path $ProjectRoot "src\bootstrap.py"
-
-if (-not (Test-Path $SharedBootstrap)) {
-    Stop-WithError "Shared bootstrap module was not found: $SharedBootstrap"
-}
 
 & $VenvPython -m src.bootstrap
 
@@ -194,7 +639,7 @@ if ($LASTEXITCODE -ne 0) {
 
 
 # ------------------------------------------------------------
-# 9. Environment ready
+# 15. Environment ready
 # ------------------------------------------------------------
 
 Write-Host ""
@@ -205,7 +650,7 @@ Write-Host ""
 
 
 # ------------------------------------------------------------
-# 10. Show menu
+# 16. Show menu
 # ------------------------------------------------------------
 
 Write-Host "What do you want to run?"
@@ -225,7 +670,7 @@ $choice = Read-Host "Enter option"
 
 
 # ------------------------------------------------------------
-# 11. Run selected stage
+# 17. Run selected stage
 # ------------------------------------------------------------
 
 switch ($choice) {
@@ -291,14 +736,17 @@ switch ($choice) {
 
 
 # ------------------------------------------------------------
-# 12. Validate selected command
+# 18. Validate selected command
 # ------------------------------------------------------------
 
 if ($LASTEXITCODE -ne 0) {
+
     Write-Host ""
     Write-Host "[ERROR] Program failed with exit code $LASTEXITCODE."
+
     exit $LASTEXITCODE
 }
+
 
 Write-Host ""
 Write-Host "============================================================"
