@@ -7,6 +7,7 @@ Endpoints:
     GET  /api/predictions
     GET  /api/predict
     GET  /api/explain
+    POST /api/chat
     GET  /api/daily-ingestion
     GET  /api/health
 
@@ -24,6 +25,7 @@ from typing import Any
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 
 from src.infrastructure.database.connection import engine
 from src.repositories.prediction_repository import get_latest_predictions
@@ -34,6 +36,9 @@ from src.controllers.pipeline_controller import (
     run_daily_market_update,
 )
 from src.controllers.prediction_controller import get_prediction
+
+from src.chatbot.chat_service import process_chat_message
+
 
 # ============================================================
 # ENVIRONMENT
@@ -62,6 +67,7 @@ app = FastAPI(
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 INDEX_FILE = PROJECT_ROOT / "index.html"
+DASHBOARD_FILE = PROJECT_ROOT / "dashboard.html"
 
 
 # ============================================================
@@ -175,6 +181,14 @@ def validate_horizon(horizon: int) -> int:
 
 
 # ============================================================
+# CHATBOT REQUEST
+# ============================================================
+
+class ChatRequest(BaseModel):
+    message: str
+
+
+# ============================================================
 # FRONTEND
 # ============================================================
 
@@ -191,6 +205,21 @@ def home():
         )
 
     return FileResponse(INDEX_FILE)
+
+
+@app.get("/dashboard")
+def dashboard():
+    """
+    Serve the existing AlphaPulse dashboard.
+    """
+
+    if not DASHBOARD_FILE.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="dashboard.html was not found.",
+        )
+
+    return FileResponse(DASHBOARD_FILE)
 
 
 # ============================================================
@@ -231,11 +260,6 @@ def market_data():
         -> market_hourly
     """
 
-    # --------------------------------------------------------
-    # CURRENT COIN MARKET
-    # Latest real market snapshot for every tracked coin.
-    # --------------------------------------------------------
-
     latest_snapshot_query = """
         SELECT DISTINCT ON (ms.coin_id)
             ms.coin_id,
@@ -262,11 +286,6 @@ def market_data():
             ms.timestamp DESC
     """
 
-    # --------------------------------------------------------
-    # DATABASE COUNTS
-    # These are FULL table counts, not the 500-row UI limit.
-    # --------------------------------------------------------
-
     counts_query = """
         SELECT
             (SELECT COUNT(*) FROM coins)
@@ -282,10 +301,6 @@ def market_data():
                 AS snapshots
     """
 
-    # --------------------------------------------------------
-    # TRACKED COINS
-    # --------------------------------------------------------
-
     coins_query = """
         SELECT
             coin_id,
@@ -296,10 +311,6 @@ def market_data():
         FROM coins
         ORDER BY symbol
     """
-
-    # --------------------------------------------------------
-    # RAW MARKET SNAPSHOTS
-    # --------------------------------------------------------
 
     raw_market_query = """
         SELECT
@@ -325,10 +336,6 @@ def market_data():
         LIMIT 500
     """
 
-    # --------------------------------------------------------
-    # RAW HISTORICAL DATA
-    # --------------------------------------------------------
-
     raw_history_query = """
         SELECT
             id,
@@ -344,11 +351,6 @@ def market_data():
             coin_id
         LIMIT 500
     """
-
-    # --------------------------------------------------------
-    # CLEAN MARKET
-    # Latest cleaned hourly observation for every coin.
-    # --------------------------------------------------------
 
     clean_market_query = """
         SELECT DISTINCT ON (mh.coin_id)
@@ -369,10 +371,6 @@ def market_data():
             mh.timestamp DESC
     """
 
-    # --------------------------------------------------------
-    # CLEAN HISTORICAL DATA
-    # --------------------------------------------------------
-
     clean_history_query = """
         SELECT
             coin_id,
@@ -388,13 +386,6 @@ def market_data():
             coin_id
         LIMIT 500
     """
-
-    # --------------------------------------------------------
-    # DATA QUALITY / CLEANING SUMMARY
-    #
-    # These values are calculated directly from PostgreSQL.
-    # Nothing is hardcoded.
-    # --------------------------------------------------------
 
     quality_query = """
         SELECT
@@ -457,10 +448,6 @@ def market_data():
     try:
         with engine.connect() as connection:
 
-            # ------------------------------------------------
-            # Current/latest snapshot per coin
-            # ------------------------------------------------
-
             latest_result = connection.exec_driver_sql(
                 latest_snapshot_query
             )
@@ -468,10 +455,6 @@ def market_data():
             latest = rows_to_dicts(
                 latest_result
             )
-
-            # ------------------------------------------------
-            # Full database counts
-            # ------------------------------------------------
 
             counts_result = connection.exec_driver_sql(
                 counts_query
@@ -483,10 +466,6 @@ def market_data():
                 else {}
             )
 
-            # ------------------------------------------------
-            # Coin metadata
-            # ------------------------------------------------
-
             coins_result = connection.exec_driver_sql(
                 coins_query
             )
@@ -494,10 +473,6 @@ def market_data():
             coins = rows_to_dicts(
                 coins_result
             )
-
-            # ------------------------------------------------
-            # Raw market snapshots
-            # ------------------------------------------------
 
             raw_market_result = connection.exec_driver_sql(
                 raw_market_query
@@ -507,10 +482,6 @@ def market_data():
                 raw_market_result
             )
 
-            # ------------------------------------------------
-            # Raw historical data
-            # ------------------------------------------------
-
             raw_history_result = connection.exec_driver_sql(
                 raw_history_query
             )
@@ -518,10 +489,6 @@ def market_data():
             raw_history = rows_to_dicts(
                 raw_history_result
             )
-
-            # ------------------------------------------------
-            # Latest clean market data
-            # ------------------------------------------------
 
             clean_market_result = connection.exec_driver_sql(
                 clean_market_query
@@ -531,10 +498,6 @@ def market_data():
                 clean_market_result
             )
 
-            # ------------------------------------------------
-            # Clean historical data
-            # ------------------------------------------------
-
             clean_history_result = connection.exec_driver_sql(
                 clean_history_query
             )
@@ -542,10 +505,6 @@ def market_data():
             clean_history = rows_to_dicts(
                 clean_history_result
             )
-
-            # ------------------------------------------------
-            # Cleaning / quality statistics
-            # ------------------------------------------------
 
             quality_result = connection.exec_driver_sql(
                 quality_query
@@ -556,10 +515,6 @@ def market_data():
                 if quality_result
                 else {}
             )
-
-        # ----------------------------------------------------
-        # RESPONSE EXPECTED BY index.html
-        # ----------------------------------------------------
 
         response = {
             "status": "success",
@@ -583,10 +538,8 @@ def market_data():
                 ),
             },
 
-            # Current Coin Market
             "latest": latest,
 
-            # Live cleaning/data-quality statistics
             "quality": {
                 "raw_null_rows": quality.get(
                     "raw_null_rows",
@@ -606,24 +559,18 @@ def market_data():
                 ),
             },
 
-            # Raw database views
             "raw": {
                 "coins": coins,
                 "market_snapshots": raw_market,
                 "market_history": raw_history,
             },
 
-            # Clean database views
             "cleaned": {
                 "market_snapshots": clean_market,
                 "market_history": clean_history,
             },
         }
 
-        # Critical fix:
-        # PostgreSQL/driver data may contain NaN values.
-        # Strict JSON cannot serialize NaN.
-        # Convert only invalid JSON values to null.
         return make_json_safe(response)
 
     except Exception as exc:
@@ -668,6 +615,40 @@ def predictions():
 
 
 # ============================================================
+# CHATBOT
+# ============================================================
+
+@app.post("/api/chat")
+def chat(request: ChatRequest):
+    """
+    Process a natural-language AlphaPulse chatbot request.
+    """
+
+    try:
+        result = process_chat_message(
+            request.message
+        )
+
+        return make_json_safe(result)
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
+
+    except Exception as exc:
+        print(
+            f"Chatbot request failed: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to process chatbot request.",
+        ) from exc
+
+
+# ============================================================
 # LIVE ML PREDICTION
 # ============================================================
 
@@ -688,10 +669,9 @@ def predict(
 
     try:
         result = get_prediction(
-
             asset=asset,
             horizon_hours=horizon,
-       )
+        )
 
         return make_json_safe({
             "status": "success",
@@ -743,7 +723,7 @@ def explain(
         result = get_prediction_explanation(
             asset=asset,
             horizon_hours=horizon,
-       )
+        )
 
         return make_json_safe({
             "status": "success",

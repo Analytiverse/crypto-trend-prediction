@@ -1,19 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>AlphaPulse - Crypto Trend Prediction</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlphaPulse AI - Crypto Prediction Assistant</title>
 
     <style>
-
         * {
             box-sizing: border-box;
         }
@@ -28,3408 +20,527 @@
         header {
             background: #111827;
             color: white;
-            padding: 28px 30px;
+            padding: 22px 30px;
         }
 
         .header-inner {
-            max-width: 1500px;
+            max-width: 1200px;
             margin: auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
         }
 
-        h1 {
+        .brand h1 {
             margin: 0;
-            font-size: 30px;
+            font-size: 28px;
         }
 
-        header p {
-            margin: 8px 0 0;
+        .brand p {
+            margin: 7px 0 0;
             color: #9ca3af;
+            font-size: 14px;
+        }
+
+        .dashboard-link {
+            text-decoration: none;
+            background: white;
+            color: #111827;
+            border-radius: 8px;
+            padding: 10px 15px;
+            font-size: 13px;
+            font-weight: bold;
+            white-space: nowrap;
         }
 
         .container {
-            max-width: 1500px;
+            max-width: 1200px;
             margin: auto;
             padding: 25px;
         }
 
-        .status {
+        .intro {
             background: white;
             border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 15px 18px;
-            margin-bottom: 20px;
-        }
-
-        .success {
-            color: #047857;
-            font-weight: bold;
-        }
-
-        .error {
-            color: #b91c1c;
-            font-weight: bold;
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns:
-                repeat(
-                    auto-fit,
-                    minmax(180px, 1fr)
-                );
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 18px;
-            border-radius: 10px;
-            border: 1px solid #e5e7eb;
-        }
-
-        .stat-label {
-            font-size: 13px;
-            color: #6b7280;
-            margin-bottom: 8px;
-        }
-
-        .stat-value {
-            font-size: 25px;
-            font-weight: bold;
-        }
-
-        .section {
-            margin-top: 35px;
-        }
-
-        .section h2 {
-            margin-bottom: 5px;
-        }
-
-        .section-description {
-            color: #6b7280;
-            margin-top: 0;
+            border-radius: 12px;
+            padding: 20px;
             margin-bottom: 18px;
-            line-height: 1.5;
         }
 
-        /* =====================================================
-           CURRENT COINS
-        ===================================================== */
-
-        .coin-grid {
-            display: grid;
-            grid-template-columns:
-                repeat(
-                    auto-fit,
-                    minmax(220px, 1fr)
-                );
-            gap: 15px;
+        .intro h2 {
+            margin: 0 0 8px;
+            font-size: 21px;
         }
 
-        .coin-card {
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 18px;
+        .intro p {
+            margin: 0;
+            color: #6b7280;
+            line-height: 1.6;
+            font-size: 14px;
         }
 
-        .coin-header {
+        .support-row {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 14px;
         }
 
-        .coin-name {
-            font-size: 17px;
-            font-weight: bold;
-        }
-
-        .coin-symbol {
+        .support-chip {
             background: #f3f4f6;
-            padding: 5px 9px;
-            border-radius: 6px;
-            font-size: 12px;
-        }
-
-        .coin-price {
-            font-size: 23px;
-            font-weight: bold;
-            margin: 16px 0;
-        }
-
-        .metric {
-            font-size: 13px;
-            color: #6b7280;
-            margin: 7px 0;
-        }
-
-        /* =====================================================
-           MODEL PREDICTIONS
-        ===================================================== */
-
-        .prediction-status {
-            background: white;
             border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 14px 18px;
-            margin-bottom: 18px;
-            font-size: 13px;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 12px;
             color: #4b5563;
         }
 
-        .prediction-grid {
-            display: grid;
-            grid-template-columns:
-                repeat(
-                    auto-fit,
-                    minmax(280px, 1fr)
-                );
-            gap: 18px;
-        }
-
-        .prediction-coin-card {
+        .chat-card {
             background: white;
             border: 1px solid #e5e7eb;
             border-radius: 12px;
             overflow: hidden;
         }
 
-        .prediction-coin-header {
+        .chat-header {
             padding: 16px 18px;
             border-bottom: 1px solid #e5e7eb;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-        }
-
-        .prediction-symbol {
-            font-size: 19px;
-            font-weight: bold;
-        }
-
-        .prediction-price {
-            color: #6b7280;
-            font-size: 13px;
-        }
-
-        .horizon-container {
-            padding: 12px;
-        }
-
-        .horizon-card {
-            border: 1px solid #e5e7eb;
-            border-radius: 9px;
-            padding: 14px;
-            margin-bottom: 10px;
-        }
-
-        .horizon-card:last-child {
-            margin-bottom: 0;
-        }
-
-        .horizon-header {
-            display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .horizon-title {
-            font-weight: bold;
-            font-size: 14px;
-        }
-
-        .trend {
-            padding: 5px 9px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .trend-up {
-            background: #ecfdf5;
-            color: #047857;
-        }
-
-        .trend-down {
-            background: #fef2f2;
-            color: #b91c1c;
-        }
-
-        .trend-stable {
-            background: #eff6ff;
-            color: #1d4ed8;
-        }
-
-        .prediction-confidence {
-            font-size: 13px;
-            margin-bottom: 10px;
-        }
-
-        .probability-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 7px;
-        }
-
-        .probability-box {
-            background: #f9fafb;
-            border-radius: 7px;
-            padding: 8px;
-            text-align: center;
-        }
-
-        .probability-label {
-            font-size: 10px;
-            color: #6b7280;
-            margin-bottom: 4px;
-        }
-
-        .probability-value {
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .prediction-meta {
-            margin-top: 10px;
-            color: #6b7280;
-            font-size: 11px;
-            line-height: 1.6;
-        }
-
-        .confidence-warning {
-            color: #92400e;
-            font-size: 11px;
-            margin-top: 8px;
-        }
-
-
-        /* =====================================================
-           AI EXPLANATION
-        ===================================================== */
-
-        .explain-button {
-            width: 100%;
-            margin-top: 12px;
-            padding: 9px 12px;
-            border: 1px solid #2563eb;
-            border-radius: 7px;
-            background: #2563eb;
-            color: white;
-            font-size: 12px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .explain-button:hover {
-            background: #1d4ed8;
-            border-color: #1d4ed8;
-        }
-
-        .explain-button:disabled {
-            background: #9ca3af;
-            border-color: #9ca3af;
-            cursor: wait;
-        }
-
-        .explanation-panel {
-            display: none;
-            margin-top: 12px;
-            padding: 13px;
-            border: 1px solid #dbeafe;
-            border-radius: 8px;
-            background: #f8fbff;
-            font-size: 12px;
-            line-height: 1.65;
-            color: #374151;
-        }
-
-        .explanation-panel.visible {
-            display: block;
-        }
-
-        .explanation-title {
-            margin-bottom: 9px;
-            font-size: 12px;
-            font-weight: bold;
-            color: #1d4ed8;
-        }
-
-        .explanation-content p {
-            margin: 7px 0;
-        }
-
-        .explanation-content ul {
-            margin: 7px 0;
-            padding-left: 20px;
-        }
-
-        .explanation-content li {
-            margin: 4px 0;
-        }
-
-        .explanation-disclaimer {
-            margin-top: 10px;
-            padding-top: 9px;
-            border-top: 1px solid #dbeafe;
-            color: #6b7280;
-            font-size: 10px;
-        }
-
-        .explanation-error {
-            color: #b91c1c;
-        }
-
-
-        /* =====================================================
-           PIPELINE
-        ===================================================== */
-
-        .pipeline {
-            display: grid;
-            grid-template-columns:
-                repeat(
-                    auto-fit,
-                    minmax(190px, 1fr)
-                );
-            gap: 12px;
-            margin-top: 18px;
-        }
-
-        .pipeline-step {
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 16px;
-        }
-
-        .pipeline-number {
-            font-size: 12px;
-            color: #6b7280;
-        }
-
-        .pipeline-title {
-            font-weight: bold;
-            margin-top: 7px;
-        }
-
-        .pipeline-text {
-            color: #6b7280;
-            font-size: 12px;
-            margin-top: 6px;
-            line-height: 1.5;
-        }
-
-        /* =====================================================
-           TABS / TABLES
-        ===================================================== */
-
-        .tabs {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-
-        .tab {
-            background: white;
-            border: 1px solid #d1d5db;
-            padding: 10px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 13px;
-        }
-
-        .tab:hover {
-            background: #f9fafb;
-        }
-
-        .tab.active {
-            background: #111827;
-            color: white;
-            border-color: #111827;
-        }
-
-        .tab.raw-active {
-            background: #b45309;
-            color: white;
-            border-color: #b45309;
-        }
-
-        .tab.clean-active {
-            background: #047857;
-            color: white;
-            border-color: #047857;
-        }
-
-        .tab.merge-active {
-            background: #6d28d9;
-            color: white;
-            border-color: #6d28d9;
-        }
-
-        .table-card {
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-bottom: 30px;
-        }
-
-        .table-header {
-            padding: 17px 18px;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .table-header h3 {
-            margin: 0 0 5px;
-        }
-
-        .table-header p {
-            margin: 0;
-            color: #6b7280;
-            font-size: 13px;
-        }
-
-        .table-wrapper {
-            width: 100%;
-            overflow-x: auto;
-            max-height: 520px;
-            overflow-y: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 900px;
-        }
-
-        th {
-            position: sticky;
-            top: 0;
-            background: #f9fafb;
-            padding: 11px 12px;
-            text-align: left;
-            border-bottom: 1px solid #e5e7eb;
-            color: #4b5563;
-            font-size: 12px;
-            z-index: 2;
-        }
-
-        td {
-            padding: 10px 12px;
-            border-bottom: 1px solid #f3f4f6;
-            font-size: 12px;
-            white-space: nowrap;
-        }
-
-        tr:hover td {
-            background: #f9fafb;
-        }
-
-        /* =====================================================
-           QUALITY
-        ===================================================== */
-
-        .quality-grid {
-            display: grid;
-            grid-template-columns:
-                repeat(
-                    auto-fit,
-                    minmax(200px, 1fr)
-                );
             gap: 15px;
         }
 
-        .quality-card {
+        .chat-title {
+            font-weight: bold;
+        }
+
+        .chat-status {
+            font-size: 12px;
+            color: #047857;
+        }
+
+        .messages {
+            min-height: 430px;
+            max-height: 560px;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f9fafb;
+        }
+
+        .message-row {
+            display: flex;
+            margin-bottom: 15px;
+        }
+
+        .message-row.user {
+            justify-content: flex-end;
+        }
+
+        .message {
+            max-width: 78%;
+            border-radius: 12px;
+            padding: 12px 14px;
+            line-height: 1.55;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .message.assistant {
             background: white;
             border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 18px;
+            color: #1f2937;
         }
 
-        .quality-label {
-            color: #6b7280;
-            font-size: 13px;
+        .message.user {
+            background: #111827;
+            color: white;
         }
 
-        .quality-value {
-            font-size: 22px;
-            font-weight: bold;
+        .message.error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
+        .message-meta {
             margin-top: 8px;
+            color: #9ca3af;
+            font-size: 10px;
+        }
+
+        .examples {
+            padding: 14px 18px 0;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .examples-title {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+
+        .example-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .example-button {
+            border: 1px solid #d1d5db;
+            background: white;
+            color: #374151;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .example-button:hover {
+            background: #f9fafb;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+            padding: 14px 18px 18px;
+        }
+
+        #messageInput {
+            flex: 1;
+            border: 1px solid #d1d5db;
+            border-radius: 9px;
+            padding: 12px 14px;
+            font: inherit;
+            font-size: 14px;
+            outline: none;
+        }
+
+        #messageInput:focus {
+            border-color: #2563eb;
+        }
+
+        #sendButton {
+            border: 0;
+            border-radius: 9px;
+            background: #2563eb;
+            color: white;
+            padding: 0 20px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #sendButton:hover {
+            background: #1d4ed8;
+        }
+
+        #sendButton:disabled {
+            background: #9ca3af;
+            cursor: wait;
+        }
+
+        .disclaimer {
+            color: #6b7280;
+            font-size: 11px;
+            line-height: 1.5;
+            padding: 0 18px 18px;
         }
 
         .footer {
             text-align: center;
-            padding: 30px;
+            padding: 25px;
             color: #9ca3af;
             font-size: 12px;
         }
 
-        .loading {
-            padding: 30px;
-            text-align: center;
-            color: #6b7280;
-        }
-
-        .raw-label {
-            color: #b45309;
-        }
-
-        .clean-label {
-            color: #047857;
-        }
-
-        .merge-label {
-            color: #6d28d9;
-        }
-
-        .model-label {
-            color: #2563eb;
-        }
-
-        .api-error {
-            margin-top: 10px;
-            padding: 12px;
-            background: #fef2f2;
-            border-radius: 8px;
-            color: #991b1b;
-            font-size: 13px;
-            word-break: break-word;
-        }
-
         @media (max-width: 700px) {
-
             header {
-                padding: 22px 18px;
+                padding: 20px 18px;
+            }
+
+            .header-inner {
+                align-items: flex-start;
+                flex-direction: column;
             }
 
             .container {
                 padding: 15px;
             }
 
-            h1 {
-                font-size: 24px;
+            .message {
+                max-width: 92%;
             }
 
+            .input-area {
+                flex-direction: column;
+            }
+
+            #sendButton {
+                padding: 12px;
+            }
         }
-
     </style>
-
 </head>
-
 
 <body>
 
-
 <header>
-
     <div class="header-inner">
+        <div class="brand">
+            <h1>AlphaPulse AI</h1>
+            <p>Crypto prediction assistant powered by AlphaPulse models</p>
+        </div>
 
-        <h1>
-            AlphaPulse - Crypto Trend Prediction
-        </h1>
-
-        <p>
-            CoinGecko → PostgreSQL → Feature Engineering → ML Models → 6h / 12h / 24h Predictions
-        </p>
-
+        <a class="dashboard-link" href="/dashboard">
+            Open Dashboard
+        </a>
     </div>
-
 </header>
-
 
 <main class="container">
 
+    <section class="intro">
+        <h2>Ask AlphaPulse about crypto market predictions</h2>
 
-    <!-- =====================================================
-         DATABASE STATUS
-    ====================================================== -->
-
-    <div
-        class="status"
-        id="status"
-    >
-        Page loaded. Connecting to PostgreSQL API...
-    </div>
-
-
-    <!-- =====================================================
-         COUNTS
-    ====================================================== -->
-
-    <div class="stats">
-
-        <div class="stat-card">
-
-            <div class="stat-label">
-                Coins
-            </div>
-
-            <div
-                class="stat-value"
-                id="coinCount"
-            >
-                -
-            </div>
-
-        </div>
-
-
-        <div class="stat-card">
-
-            <div class="stat-label">
-                Raw History Rows
-            </div>
-
-            <div
-                class="stat-value"
-                id="rawCount"
-            >
-                -
-            </div>
-
-        </div>
-
-
-        <div class="stat-card">
-
-            <div class="stat-label">
-                Clean History Rows
-            </div>
-
-            <div
-                class="stat-value"
-                id="cleanCount"
-            >
-                -
-            </div>
-
-        </div>
-
-
-        <div class="stat-card">
-
-            <div class="stat-label">
-                Market Snapshot Rows
-            </div>
-
-            <div
-                class="stat-value"
-                id="snapshotCount"
-            >
-                -
-            </div>
-
-        </div>
-
-
-        <div class="stat-card">
-
-            <div class="stat-label">
-                Latest Model Predictions
-            </div>
-
-            <div
-                class="stat-value"
-                id="predictionCount"
-            >
-                -
-            </div>
-
-        </div>
-
-    </div>
-
-
-
-    <!-- =====================================================
-         CURRENT MARKET
-    ====================================================== -->
-
-    <section class="section">
-
-        <h2>
-            Current Coin Market
-        </h2>
-
-        <p class="section-description">
-            Latest stored price, market cap and trading volume
-            for the five cryptocurrencies.
+        <p>
+            Ask natural-language questions about supported cryptocurrencies.
+            AlphaPulse AI interprets your request and uses the existing prediction
+            models to generate 6-hour, 12-hour, or 24-hour market-direction signals.
         </p>
 
-        <div
-            class="coin-grid"
-            id="coinCards"
-        >
+        <div class="support-row">
+            <span class="support-chip">BTC</span>
+            <span class="support-chip">ETH</span>
+            <span class="support-chip">SOL</span>
+            <span class="support-chip">XRP</span>
+            <span class="support-chip">ADA</span>
+            <span class="support-chip">6h</span>
+            <span class="support-chip">12h</span>
+            <span class="support-chip">24h</span>
+        </div>
+    </section>
 
-            <div class="coin-card">
+    <section class="chat-card">
 
-                <div class="coin-name">
-                    Loading market data...
+        <div class="chat-header">
+            <div class="chat-title">AlphaPulse Prediction Chat</div>
+            <div class="chat-status">● API connected through /api/chat</div>
+        </div>
+
+        <div class="messages" id="messages">
+            <div class="message-row">
+                <div class="message assistant">
+                    Hi. I can help you query AlphaPulse predictions for BTC, ETH, SOL, XRP and ADA across the supported 6h, 12h and 24h horizons.
+
+                    <div class="message-meta">
+                        Try a prediction, comparison, or investment scenario.
+                    </div>
                 </div>
-
             </div>
+        </div>
 
+        <div class="examples">
+            <div class="examples-title">Example questions</div>
+
+            <div class="example-buttons">
+                <button class="example-button" type="button"
+                    data-prompt="What is the status of Bitcoin in the next 24 hours?">
+                    BTC next 24h
+                </button>
+
+                <button class="example-button" type="button"
+                    data-prompt="Compare BTC and ETH for the next 12 hours">
+                    Compare BTC & ETH
+                </button>
+
+                <button class="example-button" type="button"
+                    data-prompt="Invest $5000 in BTC, what could happen in the next 24 hours?">
+                    $5K BTC scenario
+                </button>
+
+                <button class="example-button" type="button"
+                    data-prompt="Compare BTC, ETH and SOL for the next 24 hours">
+                    Compare 3 coins
+                </button>
+            </div>
+        </div>
+
+        <form class="input-area" id="chatForm">
+            <input
+                id="messageInput"
+                type="text"
+                maxlength="2000"
+                autocomplete="off"
+                placeholder="Example: Compare BTC and ETH for the next 12 hours"
+                required
+            >
+
+            <button id="sendButton" type="submit">
+                Send
+            </button>
+        </form>
+
+        <div class="disclaimer">
+            AlphaPulse provides model-generated analytical signals, not financial advice.
+            The current models classify direction as UP, DOWN, or STABLE and do not
+            guarantee future returns or exact future prices.
         </div>
 
     </section>
-
-
-
-    <!-- =====================================================
-         MODEL PREDICTIONS
-    ====================================================== -->
-
-    <section class="section">
-
-        <h2>
-            Model Predictions
-        </h2>
-
-        <p class="section-description">
-            Latest stored trend prediction for each cryptocurrency
-            across the 6-hour, 12-hour and 24-hour horizons.
-            Probabilities are shown because the winning class alone
-            does not represent model uncertainty.
-        </p>
-
-        <div
-            class="prediction-status"
-            id="predictionStatus"
-        >
-            Loading stored predictions...
-        </div>
-
-        <div
-            class="prediction-grid"
-            id="predictionCards"
-        >
-
-            <div class="prediction-coin-card">
-
-                <div class="loading">
-                    Waiting for prediction API...
-                </div>
-
-            </div>
-
-        </div>
-
-    </section>
-
-
-
-    <!-- =====================================================
-         PIPELINE
-    ====================================================== -->
-
-    <section class="section">
-
-        <h2>
-            End-to-End Pipeline
-        </h2>
-
-        <p class="section-description">
-            AlphaPulse converts CoinGecko market data into validated
-            time-series features and production model predictions.
-        </p>
-
-
-        <div class="pipeline">
-
-
-            <div class="pipeline-step">
-
-                <div class="pipeline-number">
-                    STEP 1
-                </div>
-
-                <div class="pipeline-title">
-                    CoinGecko
-                </div>
-
-                <div class="pipeline-text">
-                    Bitcoin, Ethereum, Solana, XRP and Cardano
-                    market data.
-                </div>
-
-            </div>
-
-
-            <div class="pipeline-step">
-
-                <div class="pipeline-number">
-                    STEP 2
-                </div>
-
-                <div class="pipeline-title raw-label">
-                    Raw Market Data
-                </div>
-
-                <div class="pipeline-text">
-                    Historical market prices, market caps,
-                    trading volumes and snapshots.
-                </div>
-
-            </div>
-
-
-            <div class="pipeline-step">
-
-                <div class="pipeline-number">
-                    STEP 3
-                </div>
-
-                <div class="pipeline-title clean-label">
-                    Cleaning
-                </div>
-
-                <div class="pipeline-text">
-                    Null handling, duplicate checks,
-                    validation and hourly normalization.
-                </div>
-
-            </div>
-
-
-            <div class="pipeline-step">
-
-                <div class="pipeline-number">
-                    STEP 4
-                </div>
-
-                <div class="pipeline-title clean-label">
-                    Feature Engineering
-                </div>
-
-                <div class="pipeline-text">
-                    Returns, rolling volatility, volume changes
-                    and cross-coin market context.
-                </div>
-
-            </div>
-
-
-            <div class="pipeline-step">
-
-                <div class="pipeline-number">
-                    STEP 5
-                </div>
-
-                <div class="pipeline-title model-label">
-                    ML Models
-                </div>
-
-                <div class="pipeline-text">
-                    Balanced Logistic Regression models trained
-                    independently for 6h, 12h and 24h horizons.
-                </div>
-
-            </div>
-
-
-            <div class="pipeline-step">
-
-                <div class="pipeline-number">
-                    STEP 6
-                </div>
-
-                <div class="pipeline-title merge-label">
-                    Predictions
-                </div>
-
-                <div class="pipeline-text">
-                    UP, DOWN or STABLE signals with class
-                    probabilities stored in PostgreSQL.
-                </div>
-
-            </div>
-
-
-        </div>
-
-    </section>
-
-
-
-    <!-- =====================================================
-         CLEANING SUMMARY
-    ====================================================== -->
-
-    <section class="section">
-
-        <h2>
-            Cleaning Summary
-        </h2>
-
-        <p class="section-description">
-            Data quality checks applied before using the dataset
-            for EDA, feature engineering and machine learning.
-        </p>
-
-
-        <div class="quality-grid">
-
-
-            <div class="quality-card">
-
-                <div class="quality-label">
-                    Raw sample null rows
-                </div>
-
-                <div
-                    class="quality-value"
-                    id="rawNulls"
-                >
-                    -
-                </div>
-
-            </div>
-
-
-            <div class="quality-card">
-
-                <div class="quality-label">
-                    Raw sample duplicates
-                </div>
-
-                <div
-                    class="quality-value"
-                    id="rawDuplicates"
-                >
-                    -
-                </div>
-
-            </div>
-
-
-            <div class="quality-card">
-
-                <div class="quality-label">
-                    Clean sample null rows
-                </div>
-
-                <div
-                    class="quality-value"
-                    id="cleanNulls"
-                >
-                    -
-                </div>
-
-            </div>
-
-
-            <div class="quality-card">
-
-                <div class="quality-label">
-                    Clean sample duplicates
-                </div>
-
-                <div
-                    class="quality-value"
-                    id="cleanDuplicates"
-                >
-                    -
-                </div>
-
-            </div>
-
-
-        </div>
-
-    </section>
-
-
-
-    <!-- =====================================================
-         DATABASE EXPLORER
-    ====================================================== -->
-
-    <section class="section">
-
-        <h2>
-            Database Explorer
-        </h2>
-
-        <p class="section-description">
-            Compare original market data, cleaned hourly data
-            and the final merged model-ready dataset.
-        </p>
-
-
-        <div class="tabs">
-
-
-            <button
-                class="tab active"
-                data-table="coins"
-            >
-                Coins
-            </button>
-
-
-            <button
-                class="tab"
-                data-table="rawMarket"
-            >
-                Raw Market
-            </button>
-
-
-            <button
-                class="tab"
-                data-table="rawHistory"
-            >
-                Raw History
-            </button>
-
-
-            <button
-                class="tab"
-                data-table="cleanMarket"
-            >
-                Clean Market
-            </button>
-
-
-            <button
-                class="tab"
-                data-table="cleanHistory"
-            >
-                Clean History
-            </button>
-
-
-            <button
-                class="tab"
-                data-table="merged"
-            >
-                Merged Dataset
-            </button>
-
-
-        </div>
-
-
-        <div id="tableContainer">
-
-            <div class="table-card">
-
-                <div class="loading">
-                    Waiting for database data...
-                </div>
-
-            </div>
-
-        </div>
-
-
-    </section>
-
 
 </main>
 
-
 <div class="footer">
-
     AlphaPulse Crypto Trend Prediction System
-    <br><br>
-    Model-generated analytical signals are not financial advice.
-
 </div>
 
-
-
 <script>
+    const messages = document.getElementById("messages");
+    const chatForm = document.getElementById("chatForm");
+    const messageInput = document.getElementById("messageInput");
+    const sendButton = document.getElementById("sendButton");
 
+    function addMessage(text, type, metaText = "") {
+        const row = document.createElement("div");
+        row.className = `message-row ${type === "user" ? "user" : ""}`;
 
-/* =====================================================
-   GLOBAL DATA
-===================================================== */
+        const bubble = document.createElement("div");
+        bubble.className = `message ${type}`;
 
-let dashboardData = null;
+        const content = document.createElement("div");
+        content.textContent = text;
+        bubble.appendChild(content);
 
-let predictionData = null;
-
-
-
-/* =====================================================
-   HELPERS
-===================================================== */
-
-function element(id) {
-
-    return document.getElementById(id);
-
-}
-
-
-function setText(id, value) {
-
-    const el = element(id);
-
-    if (el) {
-
-        el.textContent = value;
-
-    }
-
-}
-
-
-function number(value) {
-
-    if (
-        value === null ||
-        value === undefined ||
-        value === ""
-    ) {
-
-        return "-";
-
-    }
-
-    const numericValue =
-        Number(value);
-
-    if (Number.isNaN(numericValue)) {
-
-        return value;
-
-    }
-
-    return new Intl.NumberFormat(
-        "en-US"
-    ).format(numericValue);
-
-}
-
-
-function money(value) {
-
-    if (
-        value === null ||
-        value === undefined ||
-        value === ""
-    ) {
-
-        return "-";
-
-    }
-
-    const numericValue =
-        Number(value);
-
-    if (Number.isNaN(numericValue)) {
-
-        return value;
-
-    }
-
-    return new Intl.NumberFormat(
-        "en-US",
-        {
-            style: "currency",
-            currency: "USD",
-            maximumFractionDigits: 6
+        if (metaText) {
+            const meta = document.createElement("div");
+            meta.className = "message-meta";
+            meta.textContent = metaText;
+            bubble.appendChild(meta);
         }
-    ).format(numericValue);
 
-}
+        row.appendChild(bubble);
+        messages.appendChild(row);
 
+        messages.scrollTop = messages.scrollHeight;
 
-function compact(value) {
-
-    if (
-        value === null ||
-        value === undefined ||
-        value === ""
-    ) {
-
-        return "-";
-
+        return row;
     }
 
-    const numericValue =
-        Number(value);
-
-    if (Number.isNaN(numericValue)) {
-
-        return value;
-
-    }
-
-    return new Intl.NumberFormat(
-        "en-US",
-        {
-            notation: "compact",
-            maximumFractionDigits: 2
+    function intentMeta(intent) {
+        if (!intent) {
+            return "";
         }
-    ).format(numericValue);
 
-}
+        const parts = [];
 
+        if (intent.type) {
+            parts.push(`Intent: ${intent.type}`);
+        }
 
-function percent(value) {
+        if (Array.isArray(intent.coins) && intent.coins.length > 0) {
+            parts.push(`Coins: ${intent.coins.join(", ")}`);
+        }
 
-    if (
-        value === null ||
-        value === undefined ||
-        value === ""
-    ) {
+        if (intent.horizon_hours) {
+            parts.push(`Horizon: ${intent.horizon_hours}h`);
+        }
 
-        return "-";
-
+        return parts.join(" · ");
     }
 
-    const numericValue =
-        Number(value);
+    async function sendMessage(message) {
+        const cleaned = message.trim();
 
-    if (Number.isNaN(numericValue)) {
+        if (!cleaned) {
+            return;
+        }
 
-        return "-";
+        addMessage(cleaned, "user");
 
-    }
+        messageInput.value = "";
+        messageInput.disabled = true;
+        sendButton.disabled = true;
+        sendButton.textContent = "Thinking...";
 
-    return `${(numericValue * 100).toFixed(2)}%`;
-
-}
-
-
-function dateValue(value) {
-
-    if (!value) {
-
-        return "-";
-
-    }
-
-    const d =
-        new Date(value);
-
-    if (
-        Number.isNaN(
-            d.getTime()
-        )
-    ) {
-
-        return value;
-
-    }
-
-    return d.toLocaleString();
-
-}
-
-
-function escapeHtml(value) {
-
-    if (
-        value === null ||
-        value === undefined
-    ) {
-
-        return "-";
-
-    }
-
-    return String(value)
-
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-
-}
-
-
-function formatCell(column, value) {
-
-    if (
-        value === null ||
-        value === undefined
-    ) {
-
-        return "-";
-
-    }
-
-    const name =
-        String(column).toLowerCase();
-
-
-    if (
-        name.includes("timestamp") ||
-        name.includes("created_at") ||
-        name.includes("updated_at") ||
-        name.includes("fetched_at")
-    ) {
-
-        return escapeHtml(
-            dateValue(value)
+        const loadingRow = addMessage(
+            "Analyzing your request and running the required AlphaPulse model calls...",
+            "assistant"
         );
 
-    }
-
-
-    if (
-        name === "price" ||
-        name === "current_price" ||
-        name.includes("high_24h") ||
-        name.includes("low_24h")
-    ) {
-
-        return escapeHtml(
-            money(value)
-        );
-
-    }
-
-
-    if (
-        name.includes("market_cap") ||
-        name.includes("volume") ||
-        name.includes("supply")
-    ) {
-
-        return escapeHtml(
-            number(value)
-        );
-
-    }
-
-
-    return escapeHtml(value);
-
-}
-
-
-
-/* =====================================================
-   CURRENT COIN CARDS
-===================================================== */
-
-function renderCoins(rows) {
-
-    const container =
-        element("coinCards");
-
-
-    if (!container) {
-
-        return;
-
-    }
-
-
-    if (
-        !Array.isArray(rows) ||
-        rows.length === 0
-    ) {
-
-        container.innerHTML = `
-
-            <div class="coin-card">
-
-                <div class="coin-name">
-                    No latest coin records available
-                </div>
-
-            </div>
-
-        `;
-
-        return;
-
-    }
-
-
-    container.innerHTML =
-        rows.map(
-
-            coin => `
-
-                <div class="coin-card">
-
-                    <div class="coin-header">
-
-                        <div class="coin-name">
-
-                            ${
-                                escapeHtml(
-                                    coin.name ||
-                                    coin.coin_id ||
-                                    "Unknown"
-                                )
-                            }
-
-                        </div>
-
-
-                        <div class="coin-symbol">
-
-                            ${
-                                escapeHtml(
-                                    coin.symbol
-                                        ? String(
-                                            coin.symbol
-                                        ).toUpperCase()
-                                        : "-"
-                                )
-                            }
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="coin-price">
-
-                        ${
-                            money(
-                                coin.price ??
-                                coin.current_price
-                            )
-                        }
-
-                    </div>
-
-
-                    <div class="metric">
-
-                        Market Cap:
-                        ${
-                            compact(
-                                coin.market_cap
-                            )
-                        }
-
-                    </div>
-
-
-                    <div class="metric">
-
-                        Volume:
-                        ${
-                            compact(
-                                coin.total_volume
-                            )
-                        }
-
-                    </div>
-
-
-                    <div class="metric">
-
-                        Timestamp:
-                        ${
-                            escapeHtml(
-                                dateValue(
-                                    coin.timestamp
-                                )
-                            )
-                        }
-
-                    </div>
-
-                </div>
-
-            `
-
-        ).join("");
-
-}
-
-
-
-/* =====================================================
-   MODEL PREDICTION CARDS
-===================================================== */
-
-function trendClass(trend) {
-
-    const normalized =
-        String(
-            trend || ""
-        ).toUpperCase();
-
-
-    if (normalized === "UP") {
-
-        return "trend-up";
-
-    }
-
-
-    if (normalized === "DOWN") {
-
-        return "trend-down";
-
-    }
-
-
-    return "trend-stable";
-
-}
-
-
-function renderPredictions(rows) {
-
-    const container =
-        element("predictionCards");
-
-
-    const status =
-        element("predictionStatus");
-
-
-    if (!container) {
-
-        return;
-
-    }
-
-
-    if (
-        !Array.isArray(rows) ||
-        rows.length === 0
-    ) {
-
-        container.innerHTML = `
-
-            <div class="prediction-coin-card">
-
-                <div class="loading">
-                    No prediction records available.
-                </div>
-
-            </div>
-
-        `;
-
-
-        if (status) {
-
-            status.innerHTML =
-                "No stored model predictions available.";
-
-        }
-
-
-        setText(
-            "predictionCount",
-            "0"
-        );
-
-
-        return;
-
-    }
-
-
-    setText(
-        "predictionCount",
-        number(rows.length)
-    );
-
-
-    const grouped = {};
-
-
-    rows.forEach(
-
-        prediction => {
-
-            const asset =
-                prediction.asset ||
-                prediction.coin_id ||
-                "UNKNOWN";
-
-
-            if (!grouped[asset]) {
-
-                grouped[asset] = [];
-
-            }
-
-
-            grouped[asset].push(
-                prediction
-            );
-
-        }
-
-    );
-
-
-    const preferredOrder = [
-        "BTC",
-        "ETH",
-        "SOL",
-        "XRP",
-        "ADA"
-    ];
-
-
-    const orderedAssets =
-        preferredOrder.filter(
-            asset => grouped[asset]
-        );
-
-
-    Object.keys(grouped).forEach(
-
-        asset => {
-
-            if (
-                !orderedAssets.includes(
-                    asset
-                )
-            ) {
-
-                orderedAssets.push(
-                    asset
-                );
-
-            }
-
-        }
-
-    );
-
-
-    const cards =
-        orderedAssets.map(
-
-            asset => {
-
-                const predictions =
-                    grouped[asset].sort(
-
-                        (a, b) =>
-                            Number(
-                                a.horizon_hours
-                            )
-                            -
-                            Number(
-                                b.horizon_hours
-                            )
-
-                    );
-
-
-                const latest =
-                    predictions[0];
-
-
-                const horizonHtml =
-                    predictions.map(
-
-                        prediction => {
-
-                            const confidence =
-                                Number(
-                                    prediction.model_confidence || 0
-                                );
-
-
-                            const probabilities =
-                                prediction.probabilities || {};
-
-
-                            const threshold =
-                                Number(
-                                    prediction.threshold || 0
-                                );
-
-
-                            const weakSignal =
-                                confidence < 0.45;
-
-
-                            return `
-
-                                <div class="horizon-card">
-
-                                    <div class="horizon-header">
-
-                                        <div class="horizon-title">
-
-                                            ${
-                                                escapeHtml(
-                                                    prediction.horizon_hours
-                                                )
-                                            } Hour Prediction
-
-                                        </div>
-
-
-                                        <div
-                                            class="
-                                                trend
-                                                ${
-                                                    trendClass(
-                                                        prediction.predicted_trend
-                                                    )
-                                                }
-                                            "
-                                        >
-
-                                            ${
-                                                escapeHtml(
-                                                    prediction.predicted_trend
-                                                )
-                                            }
-
-                                        </div>
-
-                                    </div>
-
-
-                                    <div class="prediction-confidence">
-
-                                        Confidence:
-
-                                        <strong>
-
-                                            ${
-                                                (
-                                                    confidence * 100
-                                                ).toFixed(2)
-                                            }%
-
-                                        </strong>
-
-                                    </div>
-
-
-                                    <div class="probability-grid">
-
-                                        <div class="probability-box">
-
-                                            <div class="probability-label">
-                                                DOWN
-                                            </div>
-
-                                            <div class="probability-value">
-
-                                                ${
-                                                    percent(
-                                                        probabilities.DOWN
-                                                    )
-                                                }
-
-                                            </div>
-
-                                        </div>
-
-
-                                        <div class="probability-box">
-
-                                            <div class="probability-label">
-                                                STABLE
-                                            </div>
-
-                                            <div class="probability-value">
-
-                                                ${
-                                                    percent(
-                                                        probabilities.STABLE
-                                                    )
-                                                }
-
-                                            </div>
-
-                                        </div>
-
-
-                                        <div class="probability-box">
-
-                                            <div class="probability-label">
-                                                UP
-                                            </div>
-
-                                            <div class="probability-value">
-
-                                                ${
-                                                    percent(
-                                                        probabilities.UP
-                                                    )
-                                                }
-
-                                            </div>
-
-                                        </div>
-
-                                    </div>
-
-
-                                    <div class="prediction-meta">
-
-                                        Threshold:
-                                        ±${
-                                            (
-                                                threshold * 100
-                                            ).toFixed(2)
-                                        }%
-
-                                        <br>
-
-                                        Model:
-                                        ${
-                                            escapeHtml(
-                                                prediction.model
-                                            )
-                                        }
-
-                                        <br>
-
-                                        Version:
-                                        ${
-                                            escapeHtml(
-                                                prediction.model_version
-                                            )
-                                        }
-
-                                    </div>
-
-
-                                    ${
-                                        weakSignal
-                                            ? `
-
-                                                <div class="confidence-warning">
-
-                                                    Low-confidence signal:
-                                                    review class probabilities,
-                                                    not only the winning label.
-
-                                                </div>
-
-                                            `
-                                            : ""
-                                    }
-
-
-                                    <button
-                                        class="explain-button"
-                                        type="button"
-                                        data-asset="${escapeHtml(asset)}"
-                                        data-horizon="${escapeHtml(prediction.horizon_hours)}"
-                                    >
-                                        Explain Prediction
-                                    </button>
-
-
-                                    <div
-                                        class="explanation-panel"
-                                        data-explanation-panel="${escapeHtml(asset)}-${escapeHtml(prediction.horizon_hours)}"
-                                    >
-                                    </div>
-
-                                </div>
-
-                            `;
-
-                        }
-
-                    ).join("");
-
-
-                return `
-
-                    <div class="prediction-coin-card">
-
-                        <div class="prediction-coin-header">
-
-                            <div class="prediction-symbol">
-
-                                ${
-                                    escapeHtml(
-                                        asset
-                                    )
-                                }
-
-                            </div>
-
-
-                            <div class="prediction-price">
-
-                                ${
-                                    money(
-                                        latest.current_price
-                                    )
-                                }
-
-                            </div>
-
-                        </div>
-
-
-                        <div class="horizon-container">
-
-                            ${horizonHtml}
-
-                        </div>
-
-                    </div>
-
-                `;
-
-            }
-
-        ).join("");
-
-
-    container.innerHTML =
-        cards;
-
-
-    const timestamps =
-        rows
-
-            .map(
-                row =>
-                    new Date(
-                        row.prediction_timestamp
-                    )
-            )
-
-            .filter(
-                date =>
-                    !Number.isNaN(
-                        date.getTime()
-                    )
-            )
-
-            .sort(
-                (a, b) =>
-                    b - a
-            );
-
-
-    if (
-        status &&
-        timestamps.length > 0
-    ) {
-
-        status.innerHTML = `
-
-            <span class="success">
-                ● Prediction database connected
-            </span>
-
-            &nbsp;&nbsp;
-
-            ${rows.length} latest predictions
-
-            &nbsp;&nbsp;
-
-            Prediction data timestamp:
-
-            <strong>
-
-                ${
-                    timestamps[0]
-                        .toLocaleString()
-                }
-
-            </strong>
-
-        `;
-
-    }
-
-}
-
-
-
-
-/* =====================================================
-   GROQ LLM EXPLANATIONS
-===================================================== */
-
-function renderExplanationMarkdown(text) {
-
-    if (!text) {
-        return "";
-    }
-
-    const safeText =
-        escapeHtml(text);
-
-    const lines =
-        safeText.split(/\r?\n/);
-
-    let html = "";
-    let inList = false;
-
-
-    function inlineMarkdown(value) {
-
-        return value.replace(
-            /\*\*(.+?)\*\*/g,
-            "<strong>$1</strong>"
-        );
-
-    }
-
-
-    lines.forEach(
-        line => {
-
-            const trimmed =
-                line.trim();
-
-
-            if (
-                trimmed.startsWith("- ")
-            ) {
-
-                if (!inList) {
-
-                    html += "<ul>";
-                    inList = true;
-
-                }
-
-                html +=
-                    `<li>${inlineMarkdown(
-                        trimmed.slice(2)
-                    )}</li>`;
-
-                return;
-
-            }
-
-
-            if (inList) {
-
-                html += "</ul>";
-                inList = false;
-
-            }
-
-
-            if (!trimmed) {
-
-                return;
-
-            }
-
-
-            html +=
-                `<p>${inlineMarkdown(
-                    trimmed
-                )}</p>`;
-
-        }
-    );
-
-
-    if (inList) {
-
-        html += "</ul>";
-
-    }
-
-
-    return html;
-
-}
-
-
-async function explainPrediction(button) {
-
-    const asset =
-        String(
-            button.dataset.asset || ""
-        ).toUpperCase();
-
-    const horizon =
-        Number(
-            button.dataset.horizon
-        );
-
-    const card =
-        button.closest(
-            ".horizon-card"
-        );
-
-    const panel =
-        card
-            ? card.querySelector(
-                ".explanation-panel"
-            )
-            : null;
-
-
-    if (!panel) {
-
-        return;
-
-    }
-
-
-    button.disabled = true;
-    button.textContent =
-        "Generating explanation...";
-
-    panel.classList.add(
-        "visible"
-    );
-
-    panel.innerHTML = `
-
-        <div class="explanation-title">
-            AI Explanation
-        </div>
-
-        <div class="loading">
-            Asking the Groq LLM to explain this
-            ${escapeHtml(asset)}
-            ${escapeHtml(horizon)}h prediction...
-        </div>
-
-    `;
-
-
-    try {
-
-        const response =
-            await fetch(
-
-                `/api/explain?asset=${
-                    encodeURIComponent(asset)
-                }&horizon=${
-                    encodeURIComponent(horizon)
-                }`,
-
-                {
-                    method: "GET",
-
-                    headers: {
-                        "Accept":
-                            "application/json"
-                    },
-
-                    cache:
-                        "no-store"
-                }
-
-            );
-
-
-        const responseText =
-            await response.text();
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                `Explanation API HTTP ${
-                    response.status
-                }: ${responseText}`
-            );
-
-        }
-
-
-        const payload =
-            JSON.parse(
-                responseText
-            );
-
-
-        if (
-            payload.status !== "success" ||
-            !payload.result
-        ) {
-
-            throw new Error(
-                "Explanation API returned an invalid response."
-            );
-
-        }
-
-
-        const result =
-            payload.result;
-
-
-        panel.innerHTML = `
-
-            <div class="explanation-title">
-
-                AI Explanation ·
-                ${escapeHtml(result.llm_provider || "Groq")}
-
-            </div>
-
-
-            <div class="explanation-content">
-
-                ${
-                    renderExplanationMarkdown(
-                        result.explanation
-                    )
-                }
-
-            </div>
-
-
-            <div class="explanation-disclaimer">
-
-                ${
-                    escapeHtml(
-                        result.disclaimer ||
-                        "Model-generated analytical signal. Not financial advice."
-                    )
-                }
-
-            </div>
-
-        `;
-
-
-        button.textContent =
-            "Refresh Explanation";
-
-
-    } catch (error) {
-
-        console.error(
-            "LLM explanation error:",
-            error
-        );
-
-
-        panel.innerHTML = `
-
-            <div class="explanation-title">
-                AI Explanation
-            </div>
-
-            <div class="explanation-error">
-
-                Could not generate the explanation.
-
-                <br><br>
-
-                ${
-                    escapeHtml(
-                        error.message
-                    )
-                }
-
-            </div>
-
-        `;
-
-
-        button.textContent =
-            "Try Again";
-
-
-    } finally {
-
-        button.disabled = false;
-
-    }
-
-}
-
-
-function setupExplanationButtons() {
-
-    const container =
-        element(
-            "predictionCards"
-        );
-
-
-    if (!container) {
-
-        return;
-
-    }
-
-
-    container.addEventListener(
-
-        "click",
-
-        function (event) {
-
-            const button =
-                event.target.closest(
-                    ".explain-button"
-                );
-
-
-            if (
-                !button ||
-                !container.contains(button)
-            ) {
-
-                return;
-
-            }
-
-
-            explainPrediction(
-                button
-            );
-
-        }
-
-    );
-
-}
-
-
-/* =====================================================
-   MERGED DATASET
-===================================================== */
-
-function createMergedDataset() {
-
-    const history =
-        dashboardData?.cleaned?.market_history || [];
-
-
-    const coins =
-        dashboardData?.cleaned?.coins ||
-        dashboardData?.raw?.coins ||
-        [];
-
-
-    const coinMap = {};
-
-
-    coins.forEach(
-
-        coin => {
-
-            coinMap[
-                coin.coin_id
-            ] = coin;
-
-        }
-
-    );
-
-
-    return history.map(
-
-        row => {
-
-            const coin =
-                coinMap[
-                    row.coin_id
-                ] || {};
-
-
-            return {
-
-                coin_id:
-                    row.coin_id,
-
-                symbol:
-                    coin.symbol || "-",
-
-                name:
-                    coin.name ||
-                    row.coin_id,
-
-                timestamp:
-                    row.timestamp,
-
-                price:
-                    row.price,
-
-                market_cap:
-                    row.market_cap,
-
-                total_volume:
-                    row.total_volume
-
-            };
-
-        }
-
-    );
-
-}
-
-
-
-/* =====================================================
-   DATA QUALITY
-===================================================== */
-
-function countNullRows(rows) {
-
-    if (
-        !Array.isArray(rows)
-    ) {
-
-        return 0;
-
-    }
-
-
-    return rows.filter(
-
-        row => {
-
-            return Object.values(
-                row
-            ).some(
-
-                value =>
-                    value === null ||
-                    value === undefined ||
-                    value === ""
-
-            );
-
-        }
-
-    ).length;
-
-}
-
-
-function countDuplicates(rows) {
-
-    if (
-        !Array.isArray(rows)
-    ) {
-
-        return 0;
-
-    }
-
-
-    const seen =
-        new Set();
-
-
-    let duplicates =
-        0;
-
-
-    rows.forEach(
-
-        row => {
-
-            const key =
-                `${row.coin_id || ""}|${row.timestamp || ""}`;
-
-
-            if (
-                seen.has(key)
-            ) {
-
-                duplicates += 1;
-
-            } else {
-
-                seen.add(key);
-
-            }
-
-        }
-
-    );
-
-
-    return duplicates;
-
-}
-
-
-function updateQuality() {
-
-    const raw =
-        dashboardData?.raw?.market_history || [];
-
-
-    const clean =
-        dashboardData?.cleaned?.market_history || [];
-
-
-    setText(
-        "rawNulls",
-        countNullRows(raw)
-    );
-
-
-    setText(
-        "rawDuplicates",
-        countDuplicates(raw)
-    );
-
-
-    setText(
-        "cleanNulls",
-        countNullRows(clean)
-    );
-
-
-    setText(
-        "cleanDuplicates",
-        countDuplicates(clean)
-    );
-
-}
-
-
-
-/* =====================================================
-   TABLE CONFIG
-===================================================== */
-
-function tableDefinitions() {
-
-    return {
-
-
-        coins: {
-
-            title:
-                "Tracked Coins",
-
-            subtitle:
-                "The cryptocurrencies configured for ingestion.",
-
-            rows:
-                dashboardData?.raw?.coins || []
-
-        },
-
-
-        rawMarket: {
-
-            title:
-                "Raw Coin Market Data",
-
-            subtitle:
-                "Original market snapshot records stored from CoinGecko.",
-
-            rows:
-                dashboardData?.raw?.market_snapshots || []
-
-        },
-
-
-        rawHistory: {
-
-            title:
-                "Raw Historical Data",
-
-            subtitle:
-                "Historical price, market cap and volume before cleaning.",
-
-            rows:
-                dashboardData?.raw?.market_history || []
-
-        },
-
-
-        cleanMarket: {
-
-            title:
-                "Cleaned Coin Market Data",
-
-            subtitle:
-                "Normalized market snapshot records.",
-
-            rows:
-                dashboardData?.cleaned?.market_snapshots || []
-
-        },
-
-
-        cleanHistory: {
-
-            title:
-                "Cleaned Historical Data",
-
-            subtitle:
-                "Validated hourly market observations.",
-
-            rows:
-                dashboardData?.cleaned?.market_history || []
-
-        },
-
-
-        merged: {
-
-            title:
-                "Final Merged Dataset",
-
-            subtitle:
-                "Coin information joined with model-ready hourly market data.",
-
-            rows:
-                createMergedDataset()
-
-        }
-
-    };
-
-}
-
-
-
-/* =====================================================
-   RENDER TABLE
-===================================================== */
-
-function renderTable(config) {
-
-    const container =
-        element("tableContainer");
-
-
-    if (!container) {
-
-        return;
-
-    }
-
-
-    if (!config) {
-
-        container.innerHTML = `
-
-            <div class="table-card">
-
-                <div class="loading">
-
-                    Table configuration not found.
-
-                </div>
-
-            </div>
-
-        `;
-
-        return;
-
-    }
-
-
-    const rows =
-        Array.isArray(
-            config.rows
-        )
-            ? config.rows
-            : [];
-
-
-    if (
-        rows.length === 0
-    ) {
-
-        container.innerHTML = `
-
-            <div class="table-card">
-
-                <div class="table-header">
-
-                    <h3>
-                        ${escapeHtml(config.title)}
-                    </h3>
-
-                    <p>
-                        ${escapeHtml(config.subtitle)}
-                    </p>
-
-                </div>
-
-
-                <div class="loading">
-
-                    No rows are currently available.
-
-                </div>
-
-            </div>
-
-        `;
-
-        return;
-
-    }
-
-
-    const columns =
-        Object.keys(
-            rows[0]
-        );
-
-
-    const headerHtml =
-        columns.map(
-
-            column => `
-
-                <th>
-
-                    ${
-                        escapeHtml(
-                            column
-                                .replaceAll(
-                                    "_",
-                                    " "
-                                )
-                                .toUpperCase()
-                        )
-                    }
-
-                </th>
-
-            `
-
-        ).join("");
-
-
-    const rowsHtml =
-        rows.map(
-
-            row => `
-
-                <tr>
-
-                    ${
-                        columns.map(
-
-                            column => `
-
-                                <td>
-
-                                    ${
-                                        formatCell(
-                                            column,
-                                            row[column]
-                                        )
-                                    }
-
-                                </td>
-
-                            `
-
-                        ).join("")
-                    }
-
-                </tr>
-
-            `
-
-        ).join("");
-
-
-    container.innerHTML = `
-
-        <div class="table-card">
-
-            <div class="table-header">
-
-                <h3>
-                    ${escapeHtml(config.title)}
-                </h3>
-
-                <p>
-
-                    ${escapeHtml(config.subtitle)}
-
-                    &nbsp; | &nbsp;
-
-                    Showing ${rows.length} records
-
-                </p>
-
-            </div>
-
-
-            <div class="table-wrapper">
-
-                <table>
-
-                    <thead>
-
-                        <tr>
-                            ${headerHtml}
-                        </tr>
-
-                    </thead>
-
-
-                    <tbody>
-
-                        ${rowsHtml}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </div>
-
-    `;
-
-}
-
-
-
-/* =====================================================
-   CHANGE TABLE
-===================================================== */
-
-function showTable(
-    name,
-    clickedButton
-) {
-
-    if (!dashboardData) {
-
-        return;
-
-    }
-
-
-    document.querySelectorAll(
-        ".tab"
-    ).forEach(
-
-        button => {
-
-            button.classList.remove(
-                "active",
-                "raw-active",
-                "clean-active",
-                "merge-active"
-            );
-
-        }
-
-    );
-
-
-    if (clickedButton) {
-
-        if (
-            name === "rawMarket" ||
-            name === "rawHistory"
-        ) {
-
-            clickedButton
-                .classList
-                .add(
-                    "raw-active"
-                );
-
-        } else if (
-            name === "cleanMarket" ||
-            name === "cleanHistory"
-        ) {
-
-            clickedButton
-                .classList
-                .add(
-                    "clean-active"
-                );
-
-        } else if (
-            name === "merged"
-        ) {
-
-            clickedButton
-                .classList
-                .add(
-                    "merge-active"
-                );
-
-        } else {
-
-            clickedButton
-                .classList
-                .add(
-                    "active"
-                );
-
-        }
-
-    }
-
-
-    const definitions =
-        tableDefinitions();
-
-
-    renderTable(
-        definitions[name]
-    );
-
-}
-
-
-
-/* =====================================================
-   BUTTON EVENTS
-===================================================== */
-
-function setupButtons() {
-
-    const buttons =
-        document.querySelectorAll(
-            ".tab"
-        );
-
-
-    buttons.forEach(
-
-        button => {
-
-            button.addEventListener(
-
-                "click",
-
-                function () {
-
-                    showTable(
-                        this.dataset.table,
-                        this
-                    );
-
-                }
-
-            );
-
-        }
-
-    );
-
-}
-
-
-
-/* =====================================================
-   LOAD MARKET DATA
-===================================================== */
-
-async function loadMarketData() {
-
-    const response =
-        await fetch(
-
-            "/api/market-data",
-
-            {
-                method: "GET",
-
+        try {
+            const response = await fetch("/api/chat", {
+                method: "POST",
                 headers: {
-                    "Accept":
-                        "application/json"
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
                 },
-
-                cache:
-                    "no-store"
-            }
-
-        );
-
-
-    const responseText =
-        await response.text();
-
-
-    if (!response.ok) {
-
-        throw new Error(
-            `Market API HTTP ${response.status}: ${responseText}`
-        );
-
-    }
-
-
-    dashboardData =
-        JSON.parse(
-            responseText
-        );
-
-
-    const counts =
-        dashboardData.counts || {};
-
-
-    setText(
-        "coinCount",
-        number(
-            counts.coins || 0
-        )
-    );
-
-
-    setText(
-        "rawCount",
-        number(
-            counts.raw_history || 0
-        )
-    );
-
-
-    setText(
-        "cleanCount",
-        number(
-            counts.clean_history || 0
-        )
-    );
-
-
-    setText(
-        "snapshotCount",
-        number(
-            counts.snapshots || 0
-        )
-    );
-
-
-    renderCoins(
-        dashboardData.latest || []
-    );
-
-
-    updateQuality();
-
-
-    const firstButton =
-        document.querySelector(
-            '[data-table="coins"]'
-        );
-
-
-    showTable(
-        "coins",
-        firstButton
-    );
-
-
-    return dashboardData;
-
-}
-
-
-
-/* =====================================================
-   LOAD PREDICTIONS
-===================================================== */
-
-async function loadPredictions() {
-
-    const response =
-        await fetch(
-
-            "/api/predictions",
-
-            {
-                method: "GET",
-
-                headers: {
-                    "Accept":
-                        "application/json"
-                },
-
-                cache:
-                    "no-store"
-            }
-
-        );
-
-
-    const responseText =
-        await response.text();
-
-
-    if (!response.ok) {
-
-        throw new Error(
-            `Prediction API HTTP ${response.status}: ${responseText}`
-        );
-
-    }
-
-
-    predictionData =
-        JSON.parse(
-            responseText
-        );
-
-
-    renderPredictions(
-        predictionData.predictions || []
-    );
-
-
-    return predictionData;
-
-}
-
-
-
-/* =====================================================
-   LOAD COMPLETE DASHBOARD
-===================================================== */
-
-async function loadDashboard() {
-
-    const status =
-        element("status");
-
-
-    try {
-
-        status.innerHTML =
-            "Connecting to PostgreSQL database...";
-
-
-        await loadMarketData();
-
-
-        const latestRows =
-            dashboardData.latest || [];
-
-
-        const timestamps =
-            latestRows
-
-                .map(
-                    row =>
-                        new Date(
-                            row.timestamp
-                        )
-                )
-
-                .filter(
-                    date =>
-                        !Number.isNaN(
-                            date.getTime()
-                        )
-                )
-
-                .sort(
-                    (a, b) =>
-                        b - a
+                body: JSON.stringify({
+                    message: cleaned
+                })
+            });
+
+            const responseText = await response.text();
+
+            let payload;
+
+            try {
+                payload = JSON.parse(responseText);
+            } catch {
+                throw new Error(
+                    `Chat API returned invalid JSON: ${responseText}`
                 );
+            }
 
+            if (!response.ok) {
+                const detail =
+                    payload.detail ||
+                    payload.message ||
+                    `HTTP ${response.status}`;
 
-        if (
-            timestamps.length > 0
-        ) {
+                throw new Error(detail);
+            }
 
-            status.innerHTML = `
+            loadingRow.remove();
 
-                <span class="success">
+            addMessage(
+                payload.message || "No response was returned.",
+                payload.success === false ? "assistant" : "assistant",
+                intentMeta(payload.intent)
+            );
 
-                    ● PostgreSQL connected
+        } catch (error) {
+            loadingRow.remove();
 
-                </span>
+            addMessage(
+                `Could not process the request. ${error.message}`,
+                "error"
+            );
 
-                &nbsp;&nbsp;
-
-                Latest market observation:
-
-                <strong>
-
-                    ${
-                        timestamps[0]
-                            .toLocaleString()
-                    }
-
-                </strong>
-
-            `;
-
-        } else {
-
-            status.innerHTML = `
-
-                <span class="success">
-
-                    ● PostgreSQL connected
-
-                </span>
-
-                &nbsp;&nbsp;
-
-                Market data loaded successfully
-
-            `;
-
+        } finally {
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+            sendButton.textContent = "Send";
+            messageInput.focus();
         }
-
-
-    } catch (error) {
-
-
-        console.error(
-            "Market dashboard error:",
-            error
-        );
-
-
-        status.innerHTML = `
-
-            <span class="error">
-
-                ● Market API connection failed
-
-            </span>
-
-
-            <div class="api-error">
-
-                ${
-                    escapeHtml(
-                        error.message
-                    )
-                }
-
-                <br><br>
-
-                Test:
-
-                <strong>
-                    /api/market-data
-                </strong>
-
-            </div>
-
-        `;
-
     }
 
+    chatForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        sendMessage(messageInput.value);
+    });
 
+    document.querySelectorAll(".example-button").forEach(button => {
+        button.addEventListener("click", function () {
+            const prompt = this.dataset.prompt || "";
+            messageInput.value = prompt;
+            messageInput.focus();
+        });
+    });
 
-    /* =================================================
-       LOAD PREDICTIONS SEPARATELY
-       MARKET UI REMAINS USABLE IF THIS REQUEST FAILS
-    ================================================= */
-
-
-    try {
-
-        await loadPredictions();
-
-
-    } catch (error) {
-
-
-        console.error(
-            "Prediction dashboard error:",
-            error
-        );
-
-
-        setText(
-            "predictionCount",
-            "-"
-        );
-
-
-        element(
-            "predictionStatus"
-        ).innerHTML = `
-
-            <span class="error">
-
-                ● Prediction API connection failed
-
-            </span>
-
-
-            <div class="api-error">
-
-                ${
-                    escapeHtml(
-                        error.message
-                    )
-                }
-
-                <br><br>
-
-                Test:
-
-                <strong>
-                    /api/predictions
-                </strong>
-
-            </div>
-
-        `;
-
-
-        element(
-            "predictionCards"
-        ).innerHTML = `
-
-            <div class="prediction-coin-card">
-
-                <div class="loading">
-
-                    Prediction data could not be loaded.
-
-                </div>
-
-            </div>
-
-        `;
-
-    }
-
-}
-
-
-
-/* =====================================================
-   START
-===================================================== */
-
-document.addEventListener(
-
-    "DOMContentLoaded",
-
-    function () {
-
-        console.log(
-            "AlphaPulse dashboard started"
-        );
-
-
-        setupButtons();
-
-        setupExplanationButtons();
-
-
-        loadDashboard();
-
-    }
-
-);
-
-
+    messageInput.focus();
 </script>
 
-
 </body>
-
 </html>
