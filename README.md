@@ -558,149 +558,611 @@ Can persist predictions to PostgreSQL.
 
 The daily market pipeline performs ingestion, cleaning, hourly upserts, gap repair, and then generates 15 predictions: 5 assets × 3 horizons. Production models are not retrained during the daily pipeline.
 
-15. API, Dashboard, and LLM Explanation Layer
+## 15. API, Dashboard, and LLM Layer
 
-The FastAPI application exposes endpoints for market data, predictions, daily ingestion, on-demand prediction, explanation, and health checks. The dashboard displays the latest market information and model predictions.
+The FastAPI application exposes endpoints for market data, predictions, daily ingestion, on-demand prediction, chatbot interaction, explanation, and health checks.
 
-The LLM layer is downstream from the ML model. The ML model produces the actual trend prediction; the LLM only explains the supplied prediction context. The current explanation provider uses Groq and is instructed not to invent market causes, news, or unsupported features.
+The application now has two main user-facing pages:
+
+- `/` - AlphaPulse AI Chatbot
+- `/dashboard` - Original analytics and prediction dashboard
+
+The production ML models remain responsible for generating the actual cryptocurrency trend predictions. The LLM layer does not replace the prediction models and does not generate market prices or prediction probabilities.
 
 Important endpoints include:
 
+```text
 /api/market-data
-
 /api/predictions
-
 /api/daily-ingestion
-
 /api/predict
-
+/api/chat
 /api/explain
-
 /api/health
+```
 
-16. Fresh Database Bootstrap
+---
 
-A clean installation no longer requires a pre-populated PostgreSQL database. The repository includes a fixed seven-day hourly seed dataset at:
+## 16. AlphaPulse AI Chatbot
 
+AlphaPulse now includes an AI-powered conversational interface that acts as the primary interaction layer between the user, the production prediction models, and verified cryptocurrency market data.
+
+The chatbot is available on the main application page:
+
+```text
+/
+```
+
+The original analytics dashboard is preserved as a second page:
+
+```text
+/dashboard
+```
+
+### Chatbot Architecture
+
+The chatbot uses Groq to understand natural-language requests and extract structured intent and parameters.
+
+Prediction execution, market-data retrieval, calculations, validation, and final grounding remain controlled by the AlphaPulse backend.
+
+```text
+User Prompt
+    |
+    v
+AlphaPulse Chat UI
+    |
+    v
+Groq Intent + Parameter Extraction
+    |
+    v
+Deterministic Execution Planner
+    |
+    +---------------------------+
+    |                           |
+    v                           v
+Prediction Pipeline       PostgreSQL Market Data
+    |                           |
+    +-------------+-------------+
+                  |
+                  v
+        Grounded Response Builder
+                  |
+                  v
+                User
+```
+
+The LLM is therefore used primarily as a natural-language interpretation layer.
+
+It does not generate the underlying ML prediction.
+
+### Supported Chatbot Capabilities
+
+The chatbot currently supports:
+
+- Cryptocurrency trend prediction
+- Current market-price queries
+- Market analysis
+- Multi-coin prediction comparisons
+- Investment scenarios
+- Model-based investment-signal comparisons
+- AlphaPulse capability questions
+- Detection and rejection of irrelevant requests
+
+Supported cryptocurrencies:
+
+- Bitcoin (BTC)
+- Ethereum (ETH)
+- Solana (SOL)
+- XRP
+- Cardano (ADA)
+
+Supported prediction horizons:
+
+- 6 hours
+- 12 hours
+- 24 hours
+
+### Intent and Parameter Extraction
+
+The chatbot converts natural-language requests into structured parameters that can be executed by the backend.
+
+Example:
+
+```text
+User:
+"What is the BTC prediction for the next 24 hours?"
+
+Extracted parameters:
+intent = prediction
+coin = BTC
+horizon = 24h
+```
+
+Investment amounts can also be extracted.
+
+Example:
+
+```text
+User:
+"If I invest $5000 in BTC, what could happen in the next 24 hours?"
+
+Extracted parameters:
+intent = investment_projection
+coin = BTC
+horizon = 24h
+investment_amount = 5000
+currency = USD
+```
+
+The extracted parameters are validated before any model or database operation is executed.
+
+### Complex Queries and Multiple Prediction Calls
+
+The chatbot can decompose complex requests into multiple production-model calls.
+
+For example:
+
+```text
+"Compare BTC, ETH and SOL for the next 24 hours."
+```
+
+is converted into separate prediction operations:
+
+```text
+predict(BTC, 24h)
+predict(ETH, 24h)
+predict(SOL, 24h)
+```
+
+The resulting model outputs are then compared.
+
+For example, AlphaPulse can identify which of the checked assets has the highest `UP` class probability.
+
+This is presented as a comparison of model signals and not as a guaranteed investment outcome.
+
+### Market-Data Grounding
+
+When a request requires market information, the chatbot retrieves the latest stored AlphaPulse market data from PostgreSQL.
+
+Grounded market information can include:
+
+- Latest stored price
+- Observation timestamp
+- 24-hour price change
+- 24-hour high
+- 24-hour low
+- Market capitalization
+- Trading volume
+
+These values are retrieved by the backend rather than generated by the LLM.
+
+Prediction-pipeline prices and stored market-snapshot prices may have different timestamps. AlphaPulse preserves the corresponding timestamps so observations from different times are not incorrectly represented as the same value.
+
+### Investment Scenarios
+
+The chatbot can interpret investment-related questions such as:
+
+```text
+"If I invest $5000 in BTC, what could happen in the next 24 hours?"
+```
+
+For supported requests, AlphaPulse combines:
+
+1. The investment amount supplied by the user.
+2. Verified market information.
+3. The production model prediction.
+4. DOWN, STABLE, and UP class probabilities.
+
+The current production models are directional classifiers.
+
+They predict:
+
+```text
+UP
+DOWN
+STABLE
+```
+
+They do not directly predict an exact future percentage return or future cryptocurrency price.
+
+Therefore:
+
+```text
+model confidence != expected return
+
+class probability != percentage profit
+```
+
+AlphaPulse does not convert model confidence or class probabilities into fabricated financial returns.
+
+### Unsupported Prediction Horizons
+
+The current trained production models support only:
+
+```text
+6h
+12h
+24h
+```
+
+If a user requests an unsupported horizon, the chatbot detects and rejects the request.
+
+Example:
+
+```text
+"If I invest $5000 in BTC today, what will my gain be in the next 10 days?"
+```
+
+AlphaPulse extracts:
+
+```text
+coin = BTC
+investment_amount = 5000
+requested_horizon = 10 days
+```
+
+but does not execute a prediction because a 10-day production model does not exist.
+
+The system returns an unsupported-horizon response instead.
+
+AlphaPulse does not chain multiple 24-hour predictions together to simulate unsupported longer horizons.
+
+### Irrelevant Query Filtering
+
+The chatbot is intentionally restricted to the AlphaPulse cryptocurrency prediction and market-analysis domain.
+
+For example:
+
+```text
+"How do I write a for loop in Python?"
+```
+
+is classified as an irrelevant request.
+
+The chatbot responds that it can assist with AlphaPulse cryptocurrency predictions, market analysis, comparisons, market information, and supported investment scenarios rather than answering the unrelated question.
+
+### Hallucination Controls
+
+A major design requirement of the chatbot is preventing unsupported financial or market claims.
+
+The following grounding rules are applied:
+
+- Market prices must come from AlphaPulse market data.
+- Prediction classes must come from the production ML pipeline.
+- Prediction probabilities must come from the production ML pipeline.
+- Groq cannot generate prediction percentages.
+- Model confidence is not treated as an expected financial return.
+- Class probabilities are not treated as percentage profits.
+- Unsupported prediction horizons are rejected.
+- 24-hour forecasts are not chained to simulate longer unsupported horizons.
+- Exact future prices are not claimed when the production model does not generate them.
+- Exact future investment profits are not claimed when the model does not predict returns.
+- Investment comparisons are presented as model signals rather than guaranteed investment recommendations.
+
+### Chat API
+
+The chatbot is exposed through:
+
+```text
+POST /api/chat
+```
+
+Example request:
+
+```json
+{
+  "message": "Compare BTC, ETH and SOL for the next 24 hours."
+}
+```
+
+The request is processed through:
+
+```text
+User Message
+    |
+    v
+Intent Parser
+    |
+    v
+Execution Planner
+    |
+    v
+Prediction / Market Data Executor
+    |
+    v
+Grounded Response Builder
+    |
+    v
+API Response
+```
+
+The API response contains the user-facing message together with structured intent information and, where applicable, prediction and market-data results.
+
+### Production Verification
+
+The chatbot workflow has been tested with:
+
+- Single-asset predictions
+- Current price queries
+- Current market data + prediction queries
+- Multi-asset prediction comparisons
+- Investment scenarios
+- Data-backed signal comparisons
+- Unsupported prediction horizons
+- Irrelevant questions
+- Capability questions
+
+Example production comparison:
+
+```text
+Compare BTC, ETH and SOL for the next 24 hours.
+```
+
+The system successfully performs three separate prediction calls and compares the resulting class probabilities.
+
+Example combined request:
+
+```text
+What is the current BTC price and prediction for the next 24 hours?
+```
+
+The system retrieves the latest stored BTC market information and combines it with the production 24-hour model output.
+
+The chatbot is deployed as the primary AlphaPulse interface, while the original analytics dashboard remains available at `/dashboard`.
+
+---
+
+## 17. Fresh Database Bootstrap
+
+A clean installation does not require a pre-populated PostgreSQL database.
+
+The repository includes a fixed seven-day hourly seed dataset at:
+
+```text
 data/seed/market_history_7d.csv
+```
 
-The seed contains 840 observations: 5 supported cryptocurrencies × 168 hourly observations.
+The seed contains 840 observations:
 
-src/database/bootstrap_database.py is idempotent:
+```text
+5 supported cryptocurrencies x 168 hourly observations
+```
 
-If the required PostgreSQL tables are missing, it creates the schema.
+`src/database/bootstrap_database.py` is idempotent:
 
-If hourly market data already exists, it leaves the existing database unchanged.
+- If the required PostgreSQL tables are missing, it creates the schema.
+- If hourly market data already exists, it leaves the existing database unchanged.
+- If the database is empty, it loads the bundled seven-day seed.
+- It verifies that all five supported coins exist and each has enough history for prediction features.
 
-If the database is empty, it loads the bundled seven-day seed.
+The empty-database bootstrap has been tested successfully against an isolated PostgreSQL database:
 
-It verifies that all five supported coins exist and each has enough history for prediction features.
-
-The empty-database bootstrap has been tested successfully against an isolated PostgreSQL database: 840 raw rows and 840 clean hourly rows were inserted, with 168 hourly observations for each supported coin.
+- 840 raw rows inserted
+- 840 clean hourly rows inserted
+- 168 hourly observations for each supported coin
 
 The seed is only the starting dataset for a fresh database. Normal CoinGecko ingestion continues to fetch and store newer market data afterward.
 
-17. Environment Configuration
+---
 
-Each developer or deployment must configure its own database and API credentials. A developer should not copy another developer's DATABASE_URL.
+## 18. Environment Configuration
 
-Create a .env file in the repository root and configure at least:
+Each developer or deployment must configure its own database and API credentials.
 
+A developer should not copy another developer's `DATABASE_URL`.
+
+Create a `.env` file in the repository root and configure at least:
+
+```env
 DATABASE_URL=postgresql://YOUR_USER:YOUR_PASSWORD@YOUR_HOST/YOUR_DATABASE?sslmode=require
 COINGECKO_API_KEY=YOUR_COINGECKO_API_KEY
 GROQ_API_KEY=YOUR_GROQ_API_KEY
+GROQ_MODEL=openai/gpt-oss-120b
+```
 
-DATABASE_URL must point to a PostgreSQL database that the current developer/environment is authorized to use. The database may be empty: the bootstrap will create the required schema and load the bundled seven-day seed automatically. If the database already contains AlphaPulse market history, the seed step is skipped and existing data is preserved.
+`DATABASE_URL` must point to a PostgreSQL database that the current developer or environment is authorized to use.
 
-Never commit .env or database/API credentials to Git.
+The database may be empty. The bootstrap process creates the required schema and loads the bundled seven-day seed automatically when necessary.
 
-18. Quick Start
+If the database already contains AlphaPulse market history, the seed step is skipped and existing data is preserved.
 
-The operating-system launchers perform local environment setup and then call the shared Python bootstrap in src/bootstrap.py. Shared bootstrap logic validates environment variables, tests PostgreSQL connectivity, performs the database bootstrap when necessary, and verifies production model artifacts.
+Never commit `.env`, database credentials, or API keys to Git.
 
-Windows
+---
+
+## 19. Quick Start
+
+The operating-system launchers perform local environment setup and then call the shared Python bootstrap in `src/bootstrap.py`.
+
+The shared bootstrap logic:
+
+1. Validates environment variables.
+2. Tests PostgreSQL connectivity.
+3. Performs the database bootstrap when necessary.
+4. Verifies production model artifacts.
+
+### Windows
 
 From PowerShell in the project root:
 
+```powershell
 .\quick_start.ps1
+```
 
-The launcher creates .venv when needed, installs requirements.txt, runs the shared bootstrap, and displays the normal analysis/modeling menu.
+The launcher creates `.venv` when needed, installs `requirements.txt`, runs the shared bootstrap, and starts the configured application workflow.
 
-macOS
+For direct local API development, activate the environment and run the FastAPI application according to the project configuration.
 
-After cloning the repository, first create and configure .env with your own PostgreSQL DATABASE_URL and required API keys. Then from Terminal in the project root:
+### macOS
 
+After cloning the repository, first create and configure `.env` with your own PostgreSQL `DATABASE_URL` and required API keys.
+
+Then from Terminal in the project root:
+
+```bash
 chmod +x quick_start.sh
 ./quick_start.sh
+```
 
-The macOS launcher creates .venv when needed, installs dependencies, and runs the same shared bootstrap as Windows. Shell files are stored with LF line endings through .gitattributes; PowerShell files use CRLF.
+The macOS launcher creates `.venv` when needed, installs dependencies, and runs the same shared bootstrap as Windows.
 
-The Windows launcher and shared bootstrap have been executed successfully. The macOS launcher is prepared for cross-platform use and should receive a final execution test on an actual macOS machine.
+Shell files are stored with LF line endings through `.gitattributes`; PowerShell files use CRLF.
 
-19. Database URL and New-Machine Onboarding
+The Windows launcher and shared bootstrap have been executed successfully.
 
-The bootstrap does not provide or share a PostgreSQL connection string. On a new machine, the developer must first configure a valid DATABASE_URL in .env.
+The macOS launcher is prepared for cross-platform use and should receive a final execution test on an actual macOS machine.
+
+---
+
+## 20. Database URL and New-Machine Onboarding
+
+The bootstrap does not provide or share a PostgreSQL connection string.
+
+On a new machine, the developer must first configure a valid `DATABASE_URL` in `.env`.
 
 The intended onboarding sequence is:
 
+```text
 Clone repository
-      ↓
+      |
+      v
 Create .env
-      ↓
+      |
+      v
 Set developer's own DATABASE_URL + API keys
-      ↓
+      |
+      v
 Run quick_start.ps1 or quick_start.sh
-      ↓
+      |
+      v
 Create/install virtual environment dependencies
-      ↓
+      |
+      v
 Shared bootstrap tests PostgreSQL connection
-      ↓
-Existing DB? ── Yes → preserve existing market data
-      │
-      No
-      ↓
-Create schema
-      ↓
-Load fixed 7-day seed (840 rows)
-      ↓
-Normal CoinGecko ingestion continues with fresh data
+      |
+      v
+Existing DB?
+   |       |
+  Yes      No
+   |       |
+   |       v
+   |    Create schema
+   |       |
+   |       v
+   |    Load fixed 7-day seed
+   |    (840 rows)
+   |       |
+   +-------+
+      |
+      v
+Normal CoinGecko ingestion continues
+with fresh market data
+```
 
 This separation is intentional: credentials remain private to each environment, while the seed dataset and bootstrap behavior are reproducible from the repository.
 
-20. Current Status
+---
 
-[✓] CoinGecko API integration
-[✓] PostgreSQL database
-[✓] Historical backfill
-[✓] Automated daily ingestion
-[✓] Data cleaning and validation
-[✓] Historical gap detection and repair
-[✓] Exploratory Data Analysis
-[✓] Target definition and threshold analysis
-[✓] Feature engineering and leakage validation
-[✓] Chronological splitting
-[✓] Horizon-specific temporal purge
-[✓] Majority baseline
-[✓] Logistic Regression
-[✓] Random Forest
-[✓] XGBoost
-[✓] Model comparison
-[✓] Final model selection
-[✓] Final held-out test evaluation
-[✓] Production model training
-[✓] Prediction persistence
-[✓] FastAPI prediction service
-[✓] Dashboard
-[✓] Groq-backed grounded explanation layer
-[✓] Fixed 7-day bootstrap seed
-[✓] Existing-database safe-skip
-[✓] Fresh empty-database bootstrap test
-[✓] Shared OS-independent bootstrap
-[✓] Windows quick-start integration and execution test
-[✓] macOS quick-start launcher and Git line-ending configuration
-[ ] Final quick_start.sh execution test on an actual Mac
-[ ] Final clean-clone onboarding test
+## 21. Project Status
 
-.\quick_start.ps1
+AlphaPulse has completed the full development workflow from data ingestion and validation through machine-learning modeling, production prediction, API integration, dashboard development, and the AI chatbot layer.
 
-```
+### Stage 1 - Data Collection & Storage
+
+- [x] CoinGecko API integration
+- [x] PostgreSQL / Neon database integration
+- [x] Historical market-data backfill
+- [x] Automated daily ingestion
+- [x] Database upsert and duplicate protection
+
+### Stage 2 - Data Quality & EDA
+
+- [x] Data cleaning and normalization
+- [x] Data-quality validation
+- [x] Historical gap detection
+- [x] Historical gap repair
+- [x] Exploratory Data Analysis
+- [x] Return and volatility analysis
+- [x] Cross-coin correlation analysis
+
+### Stage 3 - Target & Feature Engineering
+
+- [x] 6h, 12h and 24h target definition
+- [x] Threshold analysis and selection
+- [x] Momentum features
+- [x] Volatility features
+- [x] Trading-volume features
+- [x] Cross-coin market-context features
+- [x] Feature validation
+- [x] Data-leakage protection
+
+### Stage 4 - Model Development
+
+- [x] Chronological train/validation/test splitting
+- [x] Horizon-specific temporal purge
+- [x] Majority-class baseline
+- [x] Logistic Regression
+- [x] Random Forest
+- [x] XGBoost
+- [x] Model comparison
+- [x] Final production-model selection
+- [x] Final held-out test evaluation
+
+### Stage 5 - Production Prediction Pipeline
+
+- [x] Production models for 6h, 12h and 24h
+- [x] Production feature reconstruction
+- [x] UP / DOWN / STABLE predictions
+- [x] Class probabilities and confidence
+- [x] Prediction persistence
+- [x] Automated predictions for all five supported assets
+
+### Stage 6 - API & Dashboard
+
+- [x] FastAPI backend
+- [x] Market-data API
+- [x] Prediction API
+- [x] On-demand prediction endpoint
+- [x] Daily-ingestion endpoint
+- [x] Health endpoint
+- [x] Analytics dashboard
+- [x] Production deployment
+
+### Stage 7 - AlphaPulse AI Chatbot
+
+- [x] Groq LLM integration
+- [x] Natural-language intent detection
+- [x] Coin, horizon and investment-amount extraction
+- [x] Deterministic execution planner
+- [x] Single-coin prediction queries
+- [x] Multi-coin prediction comparisons
+- [x] Current market-data queries
+- [x] Investment-scenario handling
+- [x] Data-backed model-signal comparisons
+- [x] Unsupported-horizon protection
+- [x] Irrelevant-query filtering
+- [x] Hallucination safeguards
+- [x] `/api/chat` endpoint
+- [x] Chatbot as the primary application page
+- [x] Existing dashboard preserved at `/dashboard`
+- [x] Local chatbot verification
+- [x] Production chatbot verification
+
+### Stage 8 - Reproducibility & Onboarding
+
+- [x] Fixed 7-day bootstrap seed
+- [x] Fresh-database schema creation
+- [x] Empty-database bootstrap
+- [x] Existing-database safe-skip
+- [x] Shared Python bootstrap
+- [x] Windows quick-start launcher
+- [x] Windows end-to-end quick-start test
+- [x] macOS quick-start launcher
+- [x] Git cross-platform line-ending configuration
+- [ ] Final `quick_start.sh` execution test on a real macOS machine
+
+### Remaining Work
+
+The complete AlphaPulse application is implemented and deployed.
+
+The only remaining environment-validation task is to execute the macOS quick-start workflow on a real Mac and confirm the complete setup process end-to-end.
