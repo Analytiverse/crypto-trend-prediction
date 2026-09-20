@@ -2,8 +2,8 @@ import os
 
 import pandas as pd
 
-from src.api.coingecko_client import CoinGeckoClient
-from src.config import (
+from src.infrastructure.coingecko.client import CoinGeckoClient
+from src.core.config import (
     COINS,
     RAW_HISTORY_FILE,
     VS_CURRENCY,

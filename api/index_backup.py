@@ -22,11 +22,15 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
-from src.database.connection import engine
-from src.database.prediction_repository import get_latest_predictions
-from src.llm.explanation_service import explain_prediction
-from src.pipelines.daily_market_pipeline import run_daily_pipeline
-from src.prediction.predictor import predict_trend
+from src.infrastructure.database.connection import engine
+from src.repositories.prediction_repository import get_latest_predictions
+from src.controllers.explanation_controller import (
+    get_prediction_explanation,
+)
+from src.controllers.pipeline_controller import (
+    run_daily_market_update,
+)
+from src.controllers.prediction_controller import get_prediction
 
 
 # ============================================================
@@ -440,10 +444,11 @@ def predict(
     horizon = validate_horizon(horizon)
 
     try:
-        result = predict_trend(
+        result = get_prediction(
+
             asset=asset,
             horizon_hours=horizon,
-        )
+  )
 
         return {
             "status": "success",
@@ -492,7 +497,7 @@ def explain(
     horizon = validate_horizon(horizon)
 
     try:
-        result = explain_prediction(
+        result = get_prediction_explanation(
             asset=asset,
             horizon_hours=horizon,
         )
@@ -538,7 +543,7 @@ def daily_ingestion():
     """
 
     try:
-        result = run_daily_pipeline()
+        result = run_daily_market_update()
 
         return {
             "status": "success",

@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 from sqlalchemy import inspect, text
 
-from src.database.connection import get_engine
+from src.infrastructure.database.connection import get_engine
 from src.database.init_db import initialize_database
 from src.database.backfill import (
     insert_coins,

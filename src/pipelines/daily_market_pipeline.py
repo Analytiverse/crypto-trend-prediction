@@ -18,9 +18,9 @@ Important:
     It does NOT retrain production models.
 """
 
-from src.config import COINS
+from src.core.config import COINS
 
-from src.database.repository import (
+from src.repositories.market_repository import (
     upsert_hourly_history,
     upsert_raw_history,
     upsert_market_snapshots,
@@ -44,7 +44,7 @@ from src.processing.clean_history import (
     clean_history_dataframe,
 )
 
-from src.prediction.batch_predictor import (
+from src.ml.inference.batch_predictor import (
     run_batch_predictions,
 )
 

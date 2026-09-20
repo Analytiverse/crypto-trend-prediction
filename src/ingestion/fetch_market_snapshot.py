@@ -1,9 +1,8 @@
 from datetime import datetime, timezone
 
 import pandas as pd
-
-from src.api.coingecko_client import CoinGeckoClient
-from src.config import COINS, VS_CURRENCY
+from src.infrastructure.coingecko.client import CoinGeckoClient
+from src.core.config import COINS, VS_CURRENCY
 
 
 client = CoinGeckoClient()

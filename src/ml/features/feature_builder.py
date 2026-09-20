@@ -1,4 +1,4 @@
-﻿"""
+"""
 Production feature construction for AlphaPulse.
 
 This module creates exactly the feature set used by the final
@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine, text
 
-from src.config import DATABASE_URL, COINS
+from src.core.config import DATABASE_URL, COINS
 
 
 # ============================================================

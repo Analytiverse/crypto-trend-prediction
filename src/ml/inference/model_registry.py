@@ -9,14 +9,11 @@ from __future__ import annotations
 
 import json
 from functools import lru_cache
-from pathlib import Path
 
 import joblib
 
+from src.core.config import PROJECT_ROOT
 
-PROJECT_ROOT = Path(
-    __file__
-).resolve().parents[2]
 
 MODEL_DIR = (
     PROJECT_ROOT
@@ -105,6 +102,9 @@ def validate_horizon(
 @lru_cache(
     maxsize=3
 )
+@lru_cache(
+    maxsize=3
+)
 def load_model(
     horizon_hours: int,
 ):
@@ -131,13 +131,12 @@ def load_model(
             f"{model_path}\n"
             "Run:\n"
             "python -m "
-            "src.modeling.train_production_models"
+            "src.ml.training.train_production_models"
         )
 
     return joblib.load(
         model_path
     )
-
 
 @lru_cache(
     maxsize=3

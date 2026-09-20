@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 from sqlalchemy import text
 
-from src.database.connection import get_engine
+from src.infrastructure.database.connection import get_engine
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]

@@ -5,7 +5,7 @@ Runs production predictions for all supported assets and horizons
 and optionally persists successful predictions to PostgreSQL.
 
 Usage:
-    python -m src.prediction.batch_predictor
+    python -m src.ml.inference.batch_predictor
 """
 
 from __future__ import annotations
@@ -15,11 +15,11 @@ import sys
 from datetime import datetime, timezone
 from typing import Any
 
-from src.database.prediction_repository import (
+from src.repositories.prediction_repository import (
     upsert_prediction_batch,
 )
 
-from src.prediction.predictor import (
+from src.ml.inference.predictor import (
     predict_trend,
 )
 

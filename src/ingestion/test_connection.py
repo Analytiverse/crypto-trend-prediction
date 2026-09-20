@@ -1,4 +1,4 @@
-from src.api.coingecko_client import CoinGeckoClient
+from src.infrastructure.coingecko.client import CoinGeckoClient
 
 
 def main():
