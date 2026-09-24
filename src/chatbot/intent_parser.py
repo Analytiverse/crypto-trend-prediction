@@ -7,6 +7,7 @@ Responsibilities:
 - Extract requested prediction horizon.
 - Extract investment amount and currency.
 - Classify the requested operation.
+- Use previous conversation context to resolve follow-up requests.
 
 Important:
 The LLM only interprets the user's request here.
@@ -16,12 +17,8 @@ It does NOT generate prices, predictions, returns, or profit values.
 from __future__ import annotations
 
 import json
-import os
 import re
 from typing import Any
-
-from dotenv import load_dotenv
-from groq import Groq
 
 from src.chatbot.schemas import (
     ChatIntent,
@@ -30,35 +27,17 @@ from src.chatbot.schemas import (
     SUPPORTED_HORIZONS,
 )
 
-
-# ============================================================
-# ENVIRONMENT
-# ============================================================
-
-load_dotenv()
-
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-
-if not GROQ_API_KEY:
-    raise ValueError(
-        "GROQ_API_KEY is not configured. "
-        "Add it to the environment or .env file."
-    )
-
-
-# ============================================================
-# GROQ CONFIGURATION
-# ============================================================
-
-client = Groq(
-    api_key=GROQ_API_KEY
+from src.infrastructure.llm.groq_client import (
+    LLMCallBudget,
+    create_chat_completion,
 )
 
-LLM_MODEL = os.getenv(
-    "GROQ_MODEL",
-    "openai/gpt-oss-120b",
-)
 
+# ============================================================
+# SYSTEM PROMPT
+# ============================================================
+
+SYSTEM_PROMPT = ""
 
 # ============================================================
 # SYSTEM PROMPT
@@ -205,6 +184,44 @@ Examples:
 10. Do not answer the user's question.
 
 11. Return ONLY valid JSON.
+
+Conversation context rules:
+
+12. Previous conversation messages may be provided before the current
+    user message.
+
+13. Use previous conversation context only when the current message
+    omits information or refers to something discussed earlier.
+
+    Example:
+
+    Previous:
+    "Predict BTC for the next 24 hours."
+
+    Current:
+    "What about ETH?"
+
+    Interpret the current request as an ETH prediction using the
+    previously established 24-hour horizon.
+
+14. The current user message always overrides previous context.
+
+    Example:
+
+    Previous horizon: 24 hours
+
+    Current:
+    "What about ETH for 6 hours?"
+
+    Use ETH and 6 hours.
+
+15. Do not reuse old prices, probabilities, prediction results,
+    confidence values, or market statistics as current factual data.
+    Conversation history is for understanding the user's intent and
+    references only.
+
+16. Do not invent missing context when it cannot reasonably be
+    resolved from the current message and previous conversation.
 
 Required JSON format:
 
@@ -403,10 +420,15 @@ def validate_investment_amount(
 
 def parse_user_intent(
     user_prompt: str,
+    conversation_history: list[dict[str, Any]] | None = None,
+    llm_budget: LLMCallBudget | None = None,
 ) -> ChatIntent:
     """
     Convert a natural-language user message into a validated
     AlphaPulse ChatIntent.
+
+    Previous conversation messages may be supplied to resolve
+    follow-up references and omitted parameters.
     """
 
     if not user_prompt:
@@ -423,19 +445,76 @@ def parse_user_intent(
             "User prompt cannot be empty."
         )
 
-    response = client.chat.completions.create(
-        model=LLM_MODEL,
-        temperature=0,
-        messages=[
+    # --------------------------------------------------------
+    # Build conversation-aware LLM messages
+    # --------------------------------------------------------
+
+    messages = [
+        {
+            "role": "system",
+            "content": SYSTEM_PROMPT,
+        }
+    ]
+
+    if conversation_history:
+
+        messages.append(
             {
                 "role": "system",
-                "content": SYSTEM_PROMPT,
-            },
-            {
-                "role": "user",
-                "content": user_prompt,
-            },
-        ],
+                "content": (
+                    "The following messages are previous AlphaPulse "
+                    "conversation context. Use them only to resolve "
+                    "references or omitted parameters in the CURRENT "
+                    "user message, such as 'what about ETH?', "
+                    "'compare it with SOL', or 'what about 12 hours?'. "
+                    "The current user message always has priority. "
+                    "Do not treat previous assistant prices, predictions, "
+                    "probabilities, confidence values, or market values "
+                    "as fresh data. Do not copy previous factual values "
+                    "into the JSON."
+                ),
+            }
+        )
+
+        for history_message in conversation_history:
+
+            role = history_message.get(
+                "role"
+            )
+
+            content = history_message.get(
+                "content"
+            )
+
+            if (
+                role in {"user", "assistant"}
+                and content
+            ):
+                messages.append(
+                    {
+                        "role": role,
+                        "content": str(content),
+                    }
+                )
+
+    messages.append(
+        {
+            "role": "user",
+            "content": user_prompt,
+        }
+    )
+
+    # --------------------------------------------------------
+    # Single guarded Groq intent-parsing call
+    # --------------------------------------------------------
+
+    if llm_budget is None:
+        llm_budget = LLMCallBudget()
+
+    response = create_chat_completion(
+        messages=messages,
+        budget=llm_budget,
+        temperature=0,
     )
 
     content = (

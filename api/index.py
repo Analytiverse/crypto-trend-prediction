@@ -186,6 +186,7 @@ def validate_horizon(horizon: int) -> int:
 
 class ChatRequest(BaseModel):
     message: str
+    session_id: str | None = None
 
 
 # ============================================================
@@ -617,16 +618,24 @@ def predictions():
 # ============================================================
 # CHATBOT
 # ============================================================
+# ============================================================
+# CHATBOT
+# ============================================================
 
 @app.post("/api/chat")
 def chat(request: ChatRequest):
     """
     Process a natural-language AlphaPulse chatbot request.
+
+    An existing session_id may be supplied to continue
+    a previous conversation. If no session_id is supplied,
+    the chat service creates a new persistent session.
     """
 
     try:
         result = process_chat_message(
-            request.message
+            message=request.message,
+            session_id=request.session_id,
         )
 
         return make_json_safe(result)
@@ -645,6 +654,51 @@ def chat(request: ChatRequest):
         raise HTTPException(
             status_code=500,
             detail="Failed to process chatbot request.",
+        ) from exc
+
+
+@app.get("/api/chat/history/{session_id}")
+def chat_history(session_id: str):
+    """
+    Return saved conversation messages for an existing chat session.
+    """
+
+    try:
+        from src.repositories.chat_memory_repository import (
+            get_recent_messages,
+            session_exists,
+        )
+
+        if not session_exists(session_id):
+            raise HTTPException(
+                status_code=404,
+                detail="Chat session not found.",
+            )
+
+        messages = get_recent_messages(
+            session_id=session_id,
+            limit=100,
+        )
+
+        return make_json_safe(
+            {
+                "success": True,
+                "session_id": session_id,
+                "messages": messages,
+            }
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as exc:
+        print(
+            f"Chat history request failed: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to load chat history.",
         ) from exc
 
 
